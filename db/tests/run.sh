@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 DB=manya_test
 PSQL="psql -X -q -v ON_ERROR_STOP=1 -d $DB"
-dropdb --if-exists $DB 2>/dev/null; createdb $DB
+dropdb --force --if-exists $DB 2>/dev/null; createdb $DB
 $PSQL -f db/local/supabase_shim.sql >/dev/null 2>&1
 for f in db/migrations/*.sql; do $PSQL -f "$f" >/dev/null; done
 $PSQL -f db/tests/00_fixture.sql >/dev/null

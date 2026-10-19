@@ -1,0 +1,45 @@
+# Backlog
+
+Estado: ✅ hecho · 🔄 en curso · ⬜ pendiente. Cada ítem se acepta cuando su regla tiene
+prueba y la vista previa fue validada por el dueño de producto.
+
+## R0 · Fundaciones
+- ✅ Spec v1 (glosario, reglas, modelo, decisiones)
+- ✅ Esquema de datos con catálogos, anulación y cierre mensual
+- ✅ Vistas de cálculo únicas (saldos, estados, ventas, ingresos, comisiones, GP)
+- ✅ Roles y permisos en la base (Administrador, Tesorería, CEO) + bitácora
+- ✅ Migración del sheet con reporte de anomalías
+- ✅ Pruebas de reglas + pruebas doradas contra el sheet
+- ⬜ Publicación: repositorio GitHub, proyecto Supabase, hosting Vercel, respaldos
+
+## R1 · Ventas y plan de pagos
+- ✅ Clientes (alta desde la venta) · ⬜ edición de clientes y marcas
+- ✅ Registrar venta (servicio contratado + ciclo) con plantilla de pago → cuotas
+- ⬜ Editar cuotas con control de "falta planificar" (426 ventas migradas tienen el plan descuadrado)
+- ✅ Renovaciones: lista por vencer + renovar en un clic (R-51)
+- ✅ Finalizar servicio contratado (R-52)
+- ✅ Generar plan de pagos para ventas que no lo tienen
+
+## R2 · Facturación y cobranza
+- ✅ Emitir comprobante agrupando cuotas (detracción sugerida por R-22)
+- ✅ Registrar pago de cuota / de comprobante completo (R-32)
+- ✅ Cobranza: cartera por antigüedad
+- ⬜ Autodetracción (R-36)
+- ⬜ Corrección guiada de anomalías de la migración
+
+## R3 · Rentabilidad
+- ✅ GP agencia y por línea (cálculo)
+- ✅ Pantallas de GP agencia / línea / venta
+- ⬜ Carga mensual de planilla, herramientas y comisiones pagadas
+- ⬜ Cierre mensual desde la interfaz
+- ⬜ GP por equipo y cliente (requiere unificar equipos de planilla y contratos)
+
+## R4 · Insights
+- ✅ Dashboard CEO: ventas, ingresos, recurrente, cobrado, GP, margen, cartera
+- ⬜ Retención de clientes, concentración top 5, DSO, forecast de caja 90 días
+
+## Después
+- ⬜ Integración SUNAT API SIRE (RVIE): importar comprobantes emitidos de ambas empresas
+- ⬜ Reclasificación del catálogo a la taxonomía BD_MAD
+- ⬜ Control de pauta con consumo real (ManyaPulse)
+- ⬜ Alertas (vencimientos, renovaciones)

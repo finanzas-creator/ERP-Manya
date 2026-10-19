@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* Tokens de color: un solo lugar para claro/oscuro. Status y series según la guía de dataviz. */
+:root {
+  color-scheme: light;
+  --surface-0: #f5f5f3;
+  --surface-1: #fcfcfb;
+  --surface-2: #f0efec;
+  --line: #e2e1dc;
+  --text-1: #0b0b0b;
+  --text-2: #52514e;
+  --text-3: #8a8984;
+  --accent: #2a78d6;
+  --accent-ink: #ffffff;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --good: #0ca30c;
+  --good-bg: #e6f5e6;
+  --warning: #9a6700;
+  --warning-bg: #fdf3dc;
+  --critical: #c42f2f;
+  --critical-bg: #fbe7e7;
+  --info-bg: #e5effb;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --surface-2: #232322;
+    --line: #34342f;
+    --text-1: #f0efec;
+    --text-2: #c3c2b7;
+    --text-3: #8f8e86;
+    --accent: #3987e5;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --good: #4cc44c;
+    --good-bg: #16301a;
+    --warning: #f0b43a;
+    --warning-bg: #3a2e12;
+    --critical: #ec6b6b;
+    --critical-bg: #3d1a1a;
+    --info-bg: #182b42;
+  }
+}
+
+@theme inline {
+  --color-s0: var(--surface-0);
+  --color-s1: var(--surface-1);
+  --color-s2: var(--surface-2);
+  --color-line: var(--line);
+  --color-t1: var(--text-1);
+  --color-t2: var(--text-2);
+  --color-t3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-good: var(--good);
+  --color-good-bg: var(--good-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-critical: var(--critical);
+  --color-critical-bg: var(--critical-bg);
+  --color-info-bg: var(--info-bg);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  background: var(--surface-0);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num { font-variant-numeric: tabular-nums; }
