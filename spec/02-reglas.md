@@ -1,0 +1,58 @@
+# Reglas de negocio
+
+Cada regla tiene un ID. El código y las pruebas citan el ID. Los valores marcados
+como *(config)* se cambian en Configuración, no en el código.
+
+## Ventas e ingresos
+- **R-01** Una venta es un ciclo mensual o un proyecto de un servicio contratado. Su monto es **neto** (sin IGV) en su moneda (USD o PEN).
+- **R-02** La modalidad (mensual / proyecto) y la naturaleza (propio / terceros) son atributos del **servicio en el catálogo**. Nunca se deducen del nombre.
+- **R-03** Servicios de **terceros** (Pauta, Influencers) se planifican, facturan y cobran, pero **no son venta ni ingreso**. Las comisiones sobre ellos sí lo son.
+- **R-04** **Ventas del mes** = suma del monto neto en USD de las ventas no anuladas y de naturaleza propia cuya **fecha de contrato** cae en ese mes.
+- **R-05** **Ingresos del mes** (devengado), ventas no anuladas y propias:
+  - mensual → todo en su **periodo de servicio** (por defecto, el mes de la fecha de contrato; editable);
+  - proyecto → el monto se reparte en partes iguales entre los meses desde la fecha de inicio hasta la fecha de entrega (ambos incluidos). Sin fecha de entrega, todo cae en el mes de inicio.
+- **R-06** Conversión a USD: ventas en PEN se dividen entre el **tipo de cambio del mes** (tabla de TC mensual).
+- **R-07** La categoría y la línea de negocio de una venta vienen del catálogo (servicio → categoría → línea).
+
+## Plan de pagos (cuotas)
+- **R-10** Cada venta tiene una o más cuotas. La suma del neto de sus cuotas debe igualar el neto de la venta; la diferencia se muestra como **falta planificar**.
+- **R-11** Al crear una venta se elige una **plantilla de pago** (100% al inicio, 50/50, 60/40, 100% al finalizar…) que genera las cuotas. Después se pueden editar.
+- **R-12** IGV de una cuota = neto × % IGV de la venta (18% por defecto *(config)*; 0% para clientes no domiciliados/exportación).
+
+## Comprobantes
+- **R-20** Un comprobante pertenece a una empresa emisora. Su identidad es empresa + tipo + serie-número y no se repite.
+- **R-21** Un comprobante agrupa una o más cuotas (pueden ser de varias ventas del mismo cliente). Su total es la suma de sus cuotas (neto + IGV): **nunca se digita**.
+- **R-22** Detracción: aplica a facturas con IGV cuyo total supera **S/ 700** *(config)*; el porcentaje es **12%** *(config)* por servicios empresariales. El % se fija en el comprobante al emitirlo (es un dato legal impreso).
+- **R-23** Vencimiento de una cuota: la fecha límite del comprobante (según cliente); si no tiene comprobante, la fecha límite de la cuota (según contrato).
+
+## Pagos y cobranza
+- **R-30** Un pago se registra contra una **cuota**, en una **cuenta bancaria**, con el monto recibido en la moneda de la cuenta y su tipo de cambio (1 si es USD). Monto USD = monto / TC.
+- **R-31** Si la cuenta es de detracciones (Banco de la Nación), el pago cuenta como detracción. Es un atributo de la cuenta, no del nombre del banco.
+- **R-32** Pagar un comprobante completo reparte el monto entre sus cuotas en proporción a su total (ayuda de la pantalla; se guardan pagos por cuota).
+- **R-33** Saldo de una cuota = total (neto + IGV) − pagos. Se considera pagada si el saldo es ≤ **5 USD** *(config)* y además ≤ **2.5% del total** *(config)*: absorbe diferencias de cambio y redondeo, pero nunca una detracción pendiente (12%).
+- **R-34** Estado de una cuota: *por facturar* (sin comprobante) · *por cobrar* · *vencida* (hoy > vencimiento) · *pagada*.
+- **R-35** Un comprobante está pagado al 100% cuando todas sus cuotas están pagadas. Su **fecha de pago completo** es la del pago que lo completó.
+- **R-36** La autodetracción se registra en el comprobante (fecha); no cambia el saldo del cliente.
+
+## Comisiones
+- **R-40** El % de comisión del partner se guarda en la venta (por defecto, el del servicio contratado).
+- **R-41** Comisión de una cuota = neto USD de la cuota × %. Se **gana** en el mes en que su comprobante queda pagado al 100%, incluida la detracción.
+- **R-42** Las comisiones pagadas se registran por persona y mes. Pendiente = ganado − pagado.
+
+## Renovaciones
+- **R-50** Un servicio contratado mensual activo vence en la **fecha fin** de su último ciclo (antes "Siguiente ciclo"). Los días para renovar se calculan contra hoy.
+- **R-51** Renovar crea la siguiente venta copiando la anterior, con inicio = fin del ciclo anterior.
+- **R-52** Un servicio contratado se marca *finalizado* cuando no se renueva.
+
+## Costos y rentabilidad (de macro a micro)
+- **R-60** Los costos en PEN (planilla, comisiones, herramientas en soles) se convierten con el TC del mes.
+- **R-61** **GP agencia** = ingresos − costos directos de ventas − planilla − herramientas − comisiones pagadas.
+- **R-62** **GP por línea**: ingresos por línea; costos directos a la línea de su venta; planilla por sub-área → línea; Dirección se reparte por pesos *(config)*; herramientas por participación en el ingreso; el overhead (Administración, Comercial, RR.HH.) queda a nivel agencia.
+- **R-63** **GP por equipo, cliente y venta**: el costo de planilla de cada equipo se reparte entre las ventas del equipo según su participación en el ingreso del mes. Ventas sin equipo quedan en "Sin equipo".
+- **R-64** Diferencia de pauta = pauta facturada − consumo real. Es un control, no entra al GP.
+
+## Cierre, seguridad y trazabilidad
+- **R-70** El cierre mensual bloquea la creación y modificación de registros de ese mes y fija su TC.
+- **R-80** Roles: **Administrador** (todo, incluida configuración), **Tesorería** (clientes, ventas, cuotas, comprobantes, pagos y costos), **CEO** (solo lectura de KPIs).
+- **R-81** Nada se borra: se anula con motivo. Lo anulado no suma en ningún cálculo.
+- **R-82** Todo cambio queda en la bitácora: quién, cuándo, valor anterior y nuevo.
