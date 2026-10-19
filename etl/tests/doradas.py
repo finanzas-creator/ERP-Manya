@@ -3,7 +3,7 @@
 Uso: python3 etl/tests/doradas.py <sheet.xlsx> <base_de_datos>
 
 Cada prueba compara un reporte del sheet con la vista del sistema que lo reemplaza.
-Las diferencias conocidas y explicadas viven en etl/tests/excepciones.csv (con motivo);
+Las diferencias conocidas y explicadas viven en data/excepciones.csv (con motivo);
 cualquier diferencia nueva hace fallar la prueba.
 """
 import collections
@@ -24,8 +24,12 @@ def query(db, sql):
     return [l.split("\t") for l in out.splitlines() if l]
 
 
-def excepciones():
-    path = os.path.join(os.path.dirname(__file__), "excepciones.csv")
+def excepciones(sheet):
+    """Diferencias conocidas con motivo. Viven junto al sheet (data/), no en el repositorio:
+    contienen datos de clientes."""
+    path = os.path.join(os.path.dirname(os.path.abspath(sheet)), "excepciones.csv")
+    if not os.path.exists(path):
+        return set()
     with open(path) as f:
         return {(r["prueba"], r["referencia"]) for r in csv.DictReader(f)}
 
@@ -100,7 +104,7 @@ def costos(hojas, db, R):
 
 def main():
     hojas, db = leer(sys.argv[1]), sys.argv[2]
-    exc = excepciones()
+    exc = excepciones(sys.argv[1])
     R = Resultado()
     ventas_por_mes(hojas, db, R)
     cobranza(hojas, db, R, exc)

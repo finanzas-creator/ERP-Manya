@@ -275,7 +275,7 @@ def migrar(hojas):
         k = clave(s)
         if k in per_canon:
             return per_canon[k]
-        # alias corto ("Maddy") -> único receptor de comisiones cuyo nombre empieza igual
+        # alias corto ("Ana") -> único receptor de comisiones cuyo nombre empieza igual
         cands = [v for kk, v in pagados_comision.items() if kk.split(" ")[0] == k]
         if len(cands) == 1:
             per_canon[k] = cands[0]

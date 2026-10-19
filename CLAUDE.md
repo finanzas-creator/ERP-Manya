@@ -30,7 +30,7 @@ contrato con él.
 - `etl/` migración desde el sheet + reporte de anomalías.
 - `etl/tests/` pruebas doradas: la base migrada reproduce los totales del sheet.
 - `app/` interfaz web (React + TypeScript + supabase-js).
-- `data/` datos fuente (no se versiona).
+- `data/` datos fuente y excepciones de las pruebas doradas (no se versiona: datos de clientes).
 
 ## Comandos
 - `make db` recrea la base local y aplica migraciones.
