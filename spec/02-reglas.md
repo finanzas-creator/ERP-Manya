@@ -18,6 +18,8 @@ como *(config)* se cambian en Configuración, no en el código.
 - **R-10** Cada venta tiene una o más cuotas. La suma del neto de sus cuotas debe igualar el neto de la venta; la diferencia se muestra como **falta planificar**.
 - **R-11** Al crear una venta se elige una **plantilla de pago** (100% al inicio, 50/50, 60/40, 100% al finalizar…) que genera las cuotas. Después se pueden editar.
 - **R-12** IGV de una cuota = neto × % IGV de la venta (18% por defecto *(config)*; 0% para clientes no domiciliados/exportación).
+- **R-13** Lo facturado es un documento legal: el monto de una cuota con comprobante, y el % IGV o la moneda de una venta con cuotas facturadas, solo los puede corregir el **administrador**.
+- **R-14** Una cuota con pagos registrados no se anula; primero se anulan sus pagos. Agregar una cuota sin monto la crea por lo que falta planificar.
 
 ## Comprobantes
 - **R-20** Un comprobante pertenece a una empresa emisora. Su identidad es empresa + tipo + serie-número y no se repite.

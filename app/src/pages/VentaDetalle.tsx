@@ -3,13 +3,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ok, supabase } from '../lib/supabase'
 import { dinero, fecha, pct } from '../lib/formato'
-import { Boton, Card, Estado, MensajeError, Modal, Tabla, Titulo, Input, Campo, Select } from '../components/ui'
+import { Boton, Card, Estado, MensajeError, Tabla, Titulo, Select } from '../components/ui'
 import { usePlantillas } from '../lib/catalogos'
 import { PagoModal } from '../components/Pago'
 import { EmitirComprobante } from '../components/EmitirComprobante'
+import { AnularModal, type TablaAnulable } from '../components/Anular'
+import { CuotaModal } from '../components/CuotaModal'
 import type { Fila } from '../lib/db'
 
 type Cuota = Fila<'v_cuota'>
+type Anulacion = { tabla: TablaAnulable; id: string; titulo: string; onListo?: () => void }
 
 export default function VentaDetalle() {
   const { id } = useParams()
@@ -17,7 +20,8 @@ export default function VentaDetalle() {
   const qc = useQueryClient()
   const [pagar, setPagar] = useState<Cuota | null>(null)
   const [emitir, setEmitir] = useState(false)
-  const [anular, setAnular] = useState(false)
+  const [anular, setAnular] = useState<Anulacion | null>(null)
+  const [editar, setEditar] = useState<Cuota | 'nueva' | null>(null)
 
   const venta = useQuery({ queryKey: ['venta', id], queryFn: async () => ok(await supabase.from('v_venta').select('*').eq('id', id!).single()) })
   const cuotas = useQuery({ queryKey: ['cuotas', id], queryFn: async () => ok(await supabase.from('v_cuota').select('*').eq('venta_id', id!).order('orden')) })
@@ -49,7 +53,7 @@ export default function VentaDetalle() {
       <Titulo accion={<div className="flex flex-wrap gap-2">
         {v.modalidad === 'mensual' && v.fecha_fin && <Boton onClick={() => renovar.mutate()} disabled={renovar.isPending}>Renovar ciclo</Boton>}
         {porFacturar.length > 0 && <Boton onClick={() => setEmitir(true)}>Emitir comprobante</Boton>}
-        <Boton variante="peligro" onClick={() => setAnular(true)}>Anular</Boton>
+        <Boton variante="peligro" onClick={() => setAnular({ tabla: 'venta', id: v.id!, titulo: 'Anular venta', onListo: () => navigate('/ventas') })}>Anular</Boton>
       </div>}>
         {v.marca ?? v.cliente} · {v.servicio}
       </Titulo>
@@ -76,16 +80,25 @@ export default function VentaDetalle() {
         <div className="flex flex-col gap-4 lg:col-span-2">
           <Card titulo="Plan de pagos" accion={(v.cuotas ?? 0) === 0
               ? <GenerarPlan ventaId={v.id!} />
-              : v.estado_plan !== 'cuadra' && <span className="num text-xs text-warning">Diferencia con la venta {dinero(v.falta_planificar, v.moneda)}</span>}>
+              : <div className="flex items-center gap-3">
+                  {v.estado_plan !== 'cuadra' && <span className="num text-xs text-warning">
+                    {v.estado_plan === 'falta_planificar' ? 'Falta planificar' : 'Excede la venta en'} {dinero(Math.abs(v.falta_planificar ?? 0), v.moneda)}</span>}
+                  <Boton onClick={() => setEditar('nueva')}>+ Cuota</Boton>
+                </div>}>
             <Tabla<Cuota> filas={cuotas.data} clave={(c) => c.id!} columnas={[
-              { titulo: '#', celda: (c) => c.orden },
-              { titulo: 'Concepto', celda: (c) => c.concepto },
+              { titulo: 'Cuota', celda: (c) => <>
+                <div>{c.orden}. {c.concepto}</div>
+                <div className="text-xs text-t3">{c.comprobante_id ? (comp(c.comprobante_id)?.serie_numero ?? 'Comanda') : 'Sin comprobante'}</div>
+              </> },
               { titulo: 'Vence', celda: (c) => <span className="whitespace-nowrap">{fecha(c.vencimiento)}</span> },
-              { titulo: 'Comprobante', celda: (c) => comp(c.comprobante_id)?.serie_numero ?? (c.comprobante_id ? 'Comanda' : '—') },
               { titulo: 'Total', derecha: true, celda: (c) => dinero(c.total, c.moneda) },
               { titulo: 'Saldo', derecha: true, celda: (c) => dinero(c.saldo, c.moneda) },
               { titulo: 'Estado', celda: (c) => <Estado valor={c.estado} /> },
-              { titulo: '', celda: (c) => !c.pagada && <Boton onClick={() => setPagar(c)}>Pagar</Boton> },
+              { titulo: '', celda: (c) => (
+                <div className="flex justify-end gap-1">
+                  <Boton variante="fantasma" onClick={() => setEditar(c)}>Editar</Boton>
+                  {!c.pagada && <Boton onClick={() => setPagar(c)}>Pagar</Boton>}
+                </div>) },
             ]} />
           </Card>
           <Card titulo="Pagos recibidos">
@@ -96,6 +109,7 @@ export default function VentaDetalle() {
               { titulo: 'Monto', derecha: true, celda: (p) => dinero(p.monto, p.moneda_cuenta) },
               { titulo: 'TC', derecha: true, celda: (p) => (p.tc === 1 ? '—' : p.tc) },
               { titulo: 'USD', derecha: true, celda: (p) => dinero(p.monto_usd, 'USD') },
+              { titulo: '', celda: (p) => <Boton variante="fantasma" onClick={() => setAnular({ tabla: 'pago', id: p.id!, titulo: 'Anular pago' })}>Anular</Boton> },
             ]} />
           </Card>
         </div>
@@ -105,7 +119,10 @@ export default function VentaDetalle() {
         tipo: 'cuota', id: pagar.id!, saldo: pagar.saldo ?? 0, moneda: pagar.moneda ?? 'USD',
         descripcion: `Cuota ${pagar.orden} · ${pagar.concepto}` }} />}
       {emitir && <EmitirComprobante clienteId={v.cliente_id!} preseleccion={porFacturar.map((c) => c.id!)} onCerrar={() => setEmitir(false)} />}
-      {anular && <AnularModal ventaId={v.id!} onCerrar={() => setAnular(false)} onListo={() => navigate('/ventas')} />}
+      {editar && <CuotaModal ventaId={v.id!} cuota={editar === 'nueva' ? null : editar} faltaPlanificar={v.falta_planificar ?? 0}
+        moneda={v.moneda ?? 'USD'} onCerrar={() => setEditar(null)}
+        onAnular={(c) => { setEditar(null); setAnular({ tabla: 'cuota', id: c.id!, titulo: `Anular cuota ${c.orden}` }) }} />}
+      {anular && <AnularModal {...anular} onCerrar={() => setAnular(null)} />}
     </>
   )
 }
@@ -123,25 +140,5 @@ function GenerarPlan({ ventaId }: { ventaId: string }) {
       <option value="">Generar plan de pagos…</option>
       {plantillas?.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
     </Select>
-  )
-}
-
-function AnularModal({ ventaId, onCerrar, onListo }: { ventaId: string; onCerrar: () => void; onListo: () => void }) {
-  const qc = useQueryClient()
-  const [motivo, setMotivo] = useState('')
-  const m = useMutation({
-    mutationFn: async () => ok(await supabase.rpc('anular', { p_tabla: 'venta', p_id: ventaId, p_motivo: motivo })),
-    onSuccess: () => { qc.invalidateQueries(); onListo() },
-  })
-  return (
-    <Modal titulo="Anular venta" onCerrar={onCerrar}>
-      <p className="mb-3 text-sm text-t2">La venta deja de contar en todos los cálculos. Queda registrada en la bitácora (R-81).</p>
-      <Campo label="Motivo"><Input value={motivo} onChange={(e) => setMotivo(e.target.value)} autoFocus /></Campo>
-      <div className="mt-3"><MensajeError error={m.error} /></div>
-      <div className="mt-4 flex justify-end gap-2">
-        <Boton onClick={onCerrar}>Cancelar</Boton>
-        <Boton variante="peligro" disabled={!motivo.trim() || m.isPending} onClick={() => m.mutate()}>Anular</Boton>
-      </div>
-    </Modal>
   )
 }

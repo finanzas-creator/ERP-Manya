@@ -12,6 +12,7 @@ import NuevaVenta from './pages/NuevaVenta'
 import Cobranza from './pages/Cobranza'
 import Renovaciones from './pages/Renovaciones'
 import Rentabilidad from './pages/Rentabilidad'
+import Revision from './pages/Revision'
 
 const NAV = [
   { a: '/', label: 'Resumen', todos: true },
@@ -19,6 +20,7 @@ const NAV = [
   { a: '/cobranza', label: 'Cobranza' },
   { a: '/renovaciones', label: 'Renovaciones' },
   { a: '/rentabilidad', label: 'Rentabilidad' },
+  { a: '/revision', label: 'Revisión de datos' },
 ]
 
 export default function App() {
@@ -60,6 +62,7 @@ export default function App() {
               <Route path="/cobranza" element={<Cobranza />} />
               <Route path="/renovaciones" element={<Renovaciones />} />
               <Route path="/rentabilidad" element={<Rentabilidad />} />
+              <Route path="/revision" element={<Revision />} />
             </>}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

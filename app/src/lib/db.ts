@@ -60,13 +60,16 @@ export type Database = {
     }
     Functions: {
       a_usd: { Args: Record<string, unknown>; Returns: unknown }
+      agregar_cuota: { Args: Record<string, unknown>; Returns: unknown }
       anular: { Args: Record<string, unknown>; Returns: unknown }
       app_rol: { Args: Record<string, unknown>; Returns: unknown }
       bloquear_mes_cerrado: { Args: Record<string, unknown>; Returns: unknown }
       cfg: { Args: Record<string, unknown>; Returns: unknown }
+      chk_anular_cuota: { Args: Record<string, unknown>; Returns: unknown }
       chk_cierre_tc: { Args: Record<string, unknown>; Returns: unknown }
       chk_cuota_comprobante: { Args: Record<string, unknown>; Returns: unknown }
       detraccion_sugerida: { Args: Record<string, unknown>; Returns: unknown }
+      edita_facturado_libre: { Args: Record<string, unknown>; Returns: unknown }
       emitir_comprobante: { Args: Record<string, unknown>; Returns: unknown }
       finalizar_servicio: { Args: Record<string, unknown>; Returns: unknown }
       generar_cuotas: { Args: Record<string, unknown>; Returns: unknown }
@@ -74,6 +77,8 @@ export type Database = {
       kpi_hoy: { Args: Record<string, unknown>; Returns: unknown }
       kpi_linea_mes: { Args: Record<string, unknown>; Returns: unknown }
       kpi_mes: { Args: Record<string, unknown>; Returns: unknown }
+      proteger_cuota_facturada: { Args: Record<string, unknown>; Returns: unknown }
+      proteger_venta_facturada: { Args: Record<string, unknown>; Returns: unknown }
       registrar_auditoria: { Args: Record<string, unknown>; Returns: unknown }
       registrar_pago_comprobante: { Args: Record<string, unknown>; Returns: unknown }
       registrar_venta: { Args: Record<string, unknown>; Returns: unknown }
