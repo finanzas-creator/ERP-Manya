@@ -181,27 +181,64 @@ def sql_val(v):
     return s.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
 
 
+def sql_insert(tabla, cols, filas, identidad=False):
+    over = " overriding system value" if identidad else ""
+    valores = ",\n".join(
+        "(" + ",".join("null" if v is None else ("true" if v is True else "false" if v is False else
+                       "'" + str(v).replace("'", "''") + "'") for v in f) + ")" for f in filas)
+    return f"insert into {tabla} ({','.join(cols)}){over} values\n{valores};\n"
+
+
+def sql_copy(tabla, cols, filas):
+    cuerpo = "\n".join("\t".join(sql_val(v) for v in f) for f in filas)
+    return f"copy {tabla} ({','.join(cols)}) from stdin;\n{cuerpo}\n\\.\n"
+
+
 class Salida:
+    """La carga como lista de sentencias. Los bloques masivos se guardan como datos y se escriben
+    como COPY (`sql`, para psql) o como INSERT por lotes (`lotes`, para la API HTTPS de Supabase,
+    que no acepta COPY ... FROM stdin)."""
+    FILAS_POR_INSERT = 500
+
     def __init__(self):
-        self.partes = []
+        self.partes = []  # texto SQL, o (tabla, cols, filas) para un bloque masivo
 
     def insert(self, tabla, cols, filas, identidad=False):
-        if not filas:
-            return
-        over = " overriding system value" if identidad else ""
-        valores = ",\n".join(
-            "(" + ",".join("null" if v is None else ("true" if v is True else "false" if v is False else
-                           "'" + str(v).replace("'", "''") + "'") for v in f) + ")" for f in filas)
-        self.partes.append(f"insert into {tabla} ({','.join(cols)}){over} values\n{valores};\n")
+        if filas:
+            self.partes.append(sql_insert(tabla, cols, filas, identidad))
 
     def copy(self, tabla, cols, filas):
-        if not filas:
-            return
-        cuerpo = "\n".join("\t".join(sql_val(v) for v in f) for f in filas)
-        self.partes.append(f"copy {tabla} ({','.join(cols)}) from stdin;\n{cuerpo}\n\\.\n")
+        if filas:
+            self.partes.append((tabla, cols, filas))
 
     def raw(self, s):
         self.partes.append(s + "\n")
+
+    def sql(self):
+        return "".join(p if isinstance(p, str) else sql_copy(*p) for p in self.partes)
+
+    def lotes(self, max_bytes):
+        """Sentencias INSERT agrupadas en lotes de ~max_bytes; cada lote es una transacción.
+        El primer lote deshabilita la auditoría y el último la rehabilita y ajusta secuencias."""
+        sentencias = []
+        for p in self.partes:
+            if isinstance(p, str):
+                if p not in ("begin;\n", "commit;\n"):
+                    sentencias.append(p)
+                continue
+            tabla, cols, filas = p
+            for i in range(0, len(filas), self.FILAS_POR_INSERT):
+                sentencias.append(sql_insert(tabla, cols, filas[i:i + self.FILAS_POR_INSERT]))
+        lotes, actual, tam = [], [], 0
+        for st in sentencias:
+            if actual and tam + len(st) > max_bytes:
+                lotes.append(actual)
+                actual, tam = [], 0
+            actual.append(st)
+            tam += len(st)
+        if actual:
+            lotes.append(actual)
+        return ["begin;\n" + "".join(l) + "commit;\n" for l in lotes]
 
 
 # ---------------------------------------------------------------- migración
@@ -669,13 +706,29 @@ def migrar(hojas):
     return S
 
 
+LOTE_BYTES = 1_000_000
+
+
 def main():
+    # Uso: migrar.py <sheet.xlsx> <carpeta> [--inserts]
+    # --inserts: además escribe <carpeta>/lotes/NNN.sql (INSERT por lotes, sin COPY) para cargar
+    # por la API de consultas de Supabase; se aplican en orden.
     origen, carpeta = sys.argv[1], sys.argv[2]
     os.makedirs(carpeta, exist_ok=True)
     hojas = leer(origen)
     S = migrar(hojas)
     with open(os.path.join(carpeta, "carga.sql"), "w") as f:
-        f.write("".join(S.partes))
+        f.write(S.sql())
+    if "--inserts" in sys.argv[3:]:
+        dir_lotes = os.path.join(carpeta, "lotes")
+        os.makedirs(dir_lotes, exist_ok=True)
+        for viejo in os.listdir(dir_lotes):
+            os.remove(os.path.join(dir_lotes, viejo))
+        lotes = S.lotes(LOTE_BYTES)
+        for i, lote in enumerate(lotes, 1):
+            with open(os.path.join(dir_lotes, f"{i:03d}.sql"), "w") as f:
+                f.write(lote)
+        print(f"{len(lotes)} lotes INSERT escritos en {dir_lotes}")
     A.escribir(carpeta)
     print(f"carga.sql escrito; {len(A.filas)} anomalías registradas en {carpeta}/anomalias.md")
 
