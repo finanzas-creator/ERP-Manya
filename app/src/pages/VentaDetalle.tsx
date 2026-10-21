@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ok, supabase } from '../lib/supabase'
-import { dinero, fecha, pct } from '../lib/formato'
-import { Boton, Card, Estado, MensajeError, Tabla, Titulo, Select } from '../components/ui'
+import { dinero, fecha, hoyISO, pct, usd } from '../lib/formato'
+import { Boton, Campo, Card, Estado, Input, MensajeError, Modal, Nota, Renglon, Tabla, Titulo, Select } from '../components/ui'
 import { usePlantillas } from '../lib/catalogos'
 import { PagoModal } from '../components/Pago'
 import { EmitirComprobante } from '../components/EmitirComprobante'
@@ -22,6 +22,7 @@ export default function VentaDetalle() {
   const [emitir, setEmitir] = useState(false)
   const [anular, setAnular] = useState<Anulacion | null>(null)
   const [editar, setEditar] = useState<Cuota | 'nueva' | null>(null)
+  const [nuevoCosto, setNuevoCosto] = useState(false)
 
   const venta = useQuery({ queryKey: ['venta', id], queryFn: async () => ok(await supabase.from('v_venta').select('*').eq('id', id!).single()) })
   const cuotas = useQuery({ queryKey: ['cuotas', id], queryFn: async () => ok(await supabase.from('v_cuota').select('*').eq('venta_id', id!).order('orden')) })
@@ -101,6 +102,8 @@ export default function VentaDetalle() {
                 </div>) },
             ]} />
           </Card>
+          <CostosVenta ventaId={id!} terceros={v.naturaleza === 'terceros'} onAgregar={() => setNuevoCosto(true)}
+            onAnular={(c) => setAnular({ tabla: 'costo_directo', id: c.id!, titulo: 'Anular costo' })} />
           <Card titulo="Pagos recibidos">
             <Tabla filas={pagos.data} clave={(p) => p.id!} vacio="Aún no hay pagos" columnas={[
               { titulo: 'Fecha', celda: (p) => fecha(p.fecha) },
@@ -122,8 +125,93 @@ export default function VentaDetalle() {
       {editar && <CuotaModal ventaId={v.id!} cuota={editar === 'nueva' ? null : editar} faltaPlanificar={v.falta_planificar ?? 0}
         moneda={v.moneda ?? 'USD'} onCerrar={() => setEditar(null)}
         onAnular={(c) => { setEditar(null); setAnular({ tabla: 'cuota', id: c.id!, titulo: `Anular cuota ${c.orden}` }) }} />}
+      {nuevoCosto && <CostoModal ventaId={v.id!} terceros={v.naturaleza === 'terceros'} moneda={v.moneda ?? 'USD'} onCerrar={() => setNuevoCosto(false)} />}
       {anular && <AnularModal {...anular} onCerrar={() => setAnular(null)} />}
     </>
+  )
+}
+
+const TIPO_COSTO = { proveedor: 'Proveedor', consumo_pauta: 'Consumo de pauta' } as const
+
+/** Costos directos de la venta y su efecto: GP de la venta (R-61, R-63) o control de pauta (R-64). */
+function CostosVenta({ ventaId, terceros, onAgregar, onAnular }:
+  { ventaId: string; terceros: boolean; onAgregar: () => void; onAnular: (c: Fila<'v_costo_directo'>) => void }) {
+  const costos = useQuery({
+    queryKey: ['costos-venta', ventaId],
+    queryFn: async () => ok(await supabase.from('v_costo_directo').select('*').eq('venta_id', ventaId).order('fecha')),
+  })
+  const gp = useQuery({
+    queryKey: ['gp-venta', ventaId], enabled: !terceros,
+    queryFn: async () => ok(await supabase.from('v_gp_venta').select('*').eq('venta_id', ventaId).maybeSingle()),
+  })
+  const pauta = useQuery({
+    queryKey: ['pauta-venta', ventaId], enabled: terceros,
+    queryFn: async () => ok(await supabase.from('v_control_pauta').select('*').eq('venta_id', ventaId).maybeSingle()),
+  })
+  const g = gp.data, p = pauta.data
+  return (
+    <Card titulo={terceros ? 'Consumo de pauta' : 'Costos y rentabilidad de la venta'} accion={<Boton onClick={onAgregar}>+ Costo</Boton>}>
+      <div className="grid gap-4 md:grid-cols-5">
+        <div className="md:col-span-3">
+          <Tabla filas={costos.data} clave={(c) => c.id!} vacio={terceros ? 'Aún no se registra el consumo' : 'Sin costos de proveedor'} columnas={[
+            { titulo: 'Fecha', celda: (c) => fecha(c.fecha) },
+            { titulo: 'Tipo', celda: (c) => <><div>{TIPO_COSTO[c.tipo!]}</div>{c.descripcion && <div className="text-xs text-t3">{c.descripcion}</div>}</> },
+            { titulo: 'Monto', derecha: true, celda: (c) => dinero(c.monto, c.moneda) },
+            { titulo: '', celda: (c) => <Boton variante="fantasma" onClick={() => onAnular(c)}>Anular</Boton> },
+          ]} />
+        </div>
+        <div className="px-4 py-3 md:col-span-2 md:border-l md:border-line">
+          {terceros ? <>
+            <Renglon label="Pauta facturada" valor={usd(p?.pauta_usd)} />
+            <Renglon sangria label="Consumida" valor={`− ${usd(p?.consumo_usd)}`} />
+            <Renglon total label="Diferencia" valor={usd(p?.diferencia_usd)} tono={(p?.diferencia_usd ?? 0) < 0 ? 'critical' : undefined} />
+          </> : <>
+            <Renglon label="Ingreso" valor={usd(g?.ingreso_usd)} />
+            <Renglon sangria label="Costos de proveedor" valor={`− ${usd(g?.costos_directos_usd)}`} />
+            <Renglon sangria label="Costo asignado (línea)" valor={`− ${usd(g?.costo_asignado_usd)}`} />
+            <Renglon total label="Gross profit" valor={usd(g?.gp_usd)} tono={(g?.gp_usd ?? 0) < 0 ? 'critical' : 'good'} />
+          </>}
+        </div>
+      </div>
+      <Nota>{terceros
+        ? 'Lo invertido en medios por esta pauta. La diferencia es un control: no entra al gross profit (R-64).'
+        : 'Influencers, producción u otros proveedores: se restan de la venta neta y del gross profit una sola vez (R-01, R-61). El costo asignado es la planilla y gastos de su línea repartidos por ingreso (R-63).'}</Nota>
+    </Card>
+  )
+}
+
+function CostoModal({ ventaId, terceros, moneda, onCerrar }: { ventaId: string; terceros: boolean; moneda: string; onCerrar: () => void }) {
+  const qc = useQueryClient()
+  const [f, setF] = useState({ tipo: terceros ? 'consumo_pauta' : 'proveedor', fecha: hoyISO(), moneda, monto: '', descripcion: '' })
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
+  const guardar = useMutation({
+    mutationFn: async () => {
+      if (!(Number(f.monto) > 0)) throw new Error('El monto debe ser mayor que cero')
+      ok(await supabase.from('costo_directo').insert({ venta_id: ventaId, tipo: f.tipo as 'proveedor' | 'consumo_pauta', fecha: f.fecha,
+        moneda: f.moneda as 'USD' | 'PEN', monto: Number(f.monto), descripcion: f.descripcion.trim() || null }))
+    },
+    onSuccess: () => { qc.invalidateQueries(); onCerrar() },
+  })
+  return (
+    <Modal titulo="Registrar costo de la venta" onCerrar={onCerrar}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Campo label="Tipo">
+          <Select value={f.tipo} onChange={set('tipo')}>
+            <option value="proveedor">Proveedor (influencers, producción…)</option>
+            {terceros && <option value="consumo_pauta">Consumo de pauta</option>}
+          </Select>
+        </Campo>
+        <Campo label="Fecha"><Input type="date" value={f.fecha} onChange={set('fecha')} /></Campo>
+        <Campo label="Moneda"><Select value={f.moneda} onChange={set('moneda')}><option value="USD">Dólares</option><option value="PEN">Soles</option></Select></Campo>
+        <Campo label="Monto"><Input type="number" step="0.01" value={f.monto} onChange={set('monto')} autoFocus /></Campo>
+        <div className="sm:col-span-2"><Campo label="Detalle"><Input value={f.descripcion} onChange={set('descripcion')} placeholder="Ej.: influencer @cuenta, Meta Ads" /></Campo></div>
+      </div>
+      <div className="mt-3"><MensajeError error={guardar.error} /></div>
+      <div className="mt-4 flex justify-end gap-2">
+        <Boton onClick={onCerrar}>Cancelar</Boton>
+        <Boton variante="primario" disabled={guardar.isPending} onClick={() => guardar.mutate()}>Guardar</Boton>
+      </div>
+    </Modal>
   )
 }
 

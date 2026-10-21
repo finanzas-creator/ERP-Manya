@@ -38,7 +38,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Planilla y gastos: ver, agregar, editar, anular y copiar del mes anterior (planilla, herramientas, comisiones pagadas)
 - ✅ Cierre mensual y tipo de cambio desde Configuración (R-70) · ✅ pesos de Dirección validados en la base (R-62)
 - ✅ Estado de resultados de 12 meses (lo leen los tres roles)
-- ✅ Pauta: facturada vs consumida por mes y por contrato (R-64) · ⬜ cargar el consumo real desde mar 2026 (el sheet llega a feb 2026)
+- ✅ Pauta: facturada vs consumida por mes y por contrato (R-64) · ⬜ cargar el consumo real desde mar 2026 (el sheet llega a feb 2026; ya se puede registrar en cada venta)
 - ⬜ GP por equipo y cliente (requiere unificar equipos de planilla y contratos)
 
 ## R4 · Insights
@@ -49,6 +49,6 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ⬜ Integración SUNAT API SIRE (RVIE): importar comprobantes emitidos de ambas empresas
 - ⬜ Reclasificación del catálogo a la taxonomía BD_MAD
 - ⬜ Control de pauta con consumo real (ManyaPulse)
-- ⬜ Registrar el costo real de influencers y otros costos directos desde la interfaz (el sheet no lo tiene; se mantienen en el control de pauta)
+- ✅ Registrar costos de proveedor (influencers, producción) y consumo de pauta desde la venta, con su GP o control de pauta
 - ⬜ Alertas (vencimientos, renovaciones)
 - ⬜ Tipo de recibo y forma de pago de la planilla como catálogos (hoy texto con sugerencias)

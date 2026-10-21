@@ -104,7 +104,7 @@ export function Renglon({ label, valor, total, sangria, tono }:
   const color = tono === 'critical' ? 'text-critical' : tono === 'good' ? 'text-good' : ''
   return (
     <div className={`flex items-baseline justify-between gap-3 py-1.5 text-sm ${total ? 'border-t border-line font-semibold' : ''} ${sangria ? 'pl-4 text-t2' : ''}`}>
-      <span>{label}</span><span className={`num ${color}`}>{valor}</span>
+      <span>{label}</span><span className={`num whitespace-nowrap ${color}`}>{valor}</span>
     </div>
   )
 }

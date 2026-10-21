@@ -46,6 +46,7 @@ CONTROL
 | `v_ventas_mes` | Ventas por fecha de contrato | R-03, R-04 |
 | `v_ingreso_venta_mes` / `v_ingresos_mes` | Ingresos por mes de ejecución | R-05 |
 | `v_comision_cuota` / `v_comision_persona_mes` | Comisión ganada vs pagada | R-41, R-42 |
+| `v_costo_directo` | Cada costo de proveedor o consumo de pauta con su monto en USD (única conversión) | R-01, R-61, R-64 |
 | `v_costos_mes` | Planilla, herramientas, comisiones y directos en USD | R-60 |
 | `v_gp_agencia_mes` → `v_gp_linea_mes` → `v_gp_venta` | GP de macro a micro (cuadran entre sí) | R-61–R-63 |
 | `v_control_pauta` | Pauta facturada vs consumida | R-64 |
