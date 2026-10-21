@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ok, supabase } from '../lib/supabase'
-import { mesActual, mesLargo, sumarMeses } from '../lib/formato'
+import { fecha, mesActual, mesLargo, sumarMeses } from '../lib/formato'
 import { ROLES } from '../lib/estados'
 import { Boton, Campo, Card, Input, MensajeError, Modal, Nota, Tabla, Titulo } from '../components/ui'
 
@@ -31,16 +31,31 @@ function TipoCambio() {
   const cierres = useQuery({ queryKey: ['cierres'], queryFn: async () => ok(await supabase.from('cierre_mensual').select('*')) })
   const cerrado = (p: string) => cierres.data?.some((c) => c.periodo === p)
   const siguiente = sumarMeses(tc.data?.[0]?.periodo ?? mesActual(), 1)
+  const sunat = useQuery({ queryKey: ['tc_sunat'], queryFn: async () => ok(await supabase.from('tipo_cambio_sunat').select('*').order('fecha', { ascending: false }).limit(7)) })
+  const actualizar = useMutation({
+    mutationFn: async () => ok(await supabase.rpc('actualizar_tc_sunat')) as unknown as string,
+    onSuccess: () => qc.invalidateQueries(),
+  })
   const cierre = useMutation({
     mutationFn: async (periodo: string) => ok(await supabase.from('cierre_mensual').insert({ periodo })),
     onSuccess: () => { qc.invalidateQueries(); setCerrar(null) },
   })
 
   return (
-    <Card titulo="Tipo de cambio mensual (S/ por USD)" accion={siguiente <= mesActual() && <Boton onClick={() => setEditar(siguiente)}>+ {mesLargo(siguiente)}</Boton>}>
+    <Card titulo="Tipo de cambio mensual (S/ por USD)" accion={<div className="flex gap-2">
+      <Boton onClick={() => actualizar.mutate()} disabled={actualizar.isPending}>Actualizar desde SUNAT</Boton>
+      {siguiente <= mesActual() && <Boton onClick={() => setEditar(siguiente)}>+ {mesLargo(siguiente)}</Boton>}
+    </div>}>
+      {(actualizar.data || actualizar.error) && <div className="border-b border-line px-4 py-2 text-sm">
+        {actualizar.data ? <span className="text-good">{actualizar.data}</span> : <MensajeError error={actualizar.error} />}</div>}
+      {(sunat.data?.length ?? 0) > 0 && <div className="flex flex-wrap gap-x-4 gap-y-1 border-b border-line px-4 py-2 text-xs text-t2">
+        <span className="font-medium">SUNAT venta:</span>
+        {sunat.data!.map((d) => <span key={d.fecha} className="num">{fecha(d.fecha).slice(0, 6)} {Number(d.venta).toFixed(3)}</span>)}
+      </div>}
       <Tabla filas={tc.data} clave={(t) => t.periodo} columnas={[
         { titulo: 'Mes', celda: (t) => mesLargo(t.periodo) },
         { titulo: 'TC', derecha: true, celda: (t) => Number(t.tc).toFixed(4) },
+        { titulo: 'Fuente', celda: (t) => <span className="text-xs text-t3">{t.fuente === 'sunat' ? 'SUNAT (venta)' : t.fuente === 'manual' ? 'Manual' : 'Sheet'}</span> },
         { titulo: 'Estado', celda: (t) => cerrado(t.periodo)
           ? <span className="text-xs text-t3">Cerrado</span>
           : <span className="flex gap-2">
@@ -48,7 +63,7 @@ function TipoCambio() {
               {t.periodo < mesActual() && <button className="text-xs text-accent hover:underline" onClick={() => setCerrar(t.periodo)}>Cerrar mes</button>}
             </span> },
       ]} />
-      <Nota>Con este TC se convierten a USD las ventas y los costos en soles del mes (R-06, R-60). Hoy es la mediana del TC de los pagos en soles (D-14, por confirmar). Cerrar un mes bloquea sus registros y fija su TC (R-70).</Nota>
+      <Nota>Con este TC se convierten a USD las ventas y los costos en soles del mes (R-06, R-60). Desde noviembre 2026 se toma solo cada día el TC de venta SUNAT (8 y 13 h); hasta octubre se conserva el del sheet, ya conciliado. Si lo corriges a mano, queda como manual y no se sobrescribe. Cerrar un mes bloquea sus registros y fija su TC (R-70).</Nota>
       {editar && <EditarTc periodo={editar} actual={tc.data?.find((t) => t.periodo === editar)?.tc} onCerrar={() => setEditar(null)} />}
       {cerrar && (
         <Modal titulo={`Cerrar ${mesLargo(cerrar)}`} onCerrar={() => setCerrar(null)}>
@@ -70,7 +85,7 @@ function EditarTc({ periodo, actual, onCerrar }: { periodo: string; actual?: num
   const guardar = useMutation({
     mutationFn: async () => {
       if (!(Number(tc) > 0)) throw new Error('El tipo de cambio debe ser mayor que cero')
-      ok(await supabase.from('tipo_cambio_mensual').upsert({ periodo, tc: Number(tc) }))
+      ok(await supabase.from('tipo_cambio_mensual').upsert({ periodo, tc: Number(tc), fuente: 'manual' }))
     },
     onSuccess: () => { qc.invalidateQueries(); onCerrar() },
   })

@@ -12,7 +12,7 @@ CATÁLOGOS (los edita el administrador)
   categoria  → línea     Performance, Gestión de medios, UX/UI, Soporte…
   servicio   → categoría  + modalidad (mensual/proyecto) + naturaleza (propio/terceros)
   equipo · persona · cuenta_bancaria (+ es_detraccion) · plantilla_pago
-  tipo_cambio_mensual · sub_area (+ grupo de costo) · peso_direccion · config
+  tipo_cambio_mensual (+ fuente) · tipo_cambio_sunat (diario, automático) · sub_area (+ grupo de costo) · peso_direccion · config
 
 OPERACIÓN (registra tesorería)
   cliente ─< marca

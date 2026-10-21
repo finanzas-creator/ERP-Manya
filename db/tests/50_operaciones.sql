@@ -58,3 +58,17 @@ begin
   assert (select modalidad from venta where id = v2) is null, 'R-02 igual al catálogo: no se guarda';
   assert (select modalidad from v_venta_base where id = v1) = 'mensual', 'R-02 la vista usa la de la venta';
 end $$;
+
+-- R-06/D-14: el TC SUNAT actualiza el mes en curso, pero no un TC manual ni uno migrado del sheet
+do $$
+begin
+  perform registrar_tc_sunat('2026-11-03', 3.40, 3.41);
+  perform registrar_tc_sunat('2026-11-04', 3.42, 3.43);
+  assert (select tc from tipo_cambio_mensual where periodo = '2026-11-01') = 3.43, 'TC del mes = último venta';
+  update tipo_cambio_mensual set tc = 3.5, fuente = 'manual' where periodo = '2026-11-01';
+  perform registrar_tc_sunat('2026-11-05', 3.44, 3.45);
+  assert (select tc from tipo_cambio_mensual where periodo = '2026-11-01') = 3.5, 'TC manual se respeta';
+  perform registrar_tc_sunat('2026-03-10', 3.70, 3.71);
+  assert (select tc from tipo_cambio_mensual where periodo = '2026-03-01') = 3.50, 'TC del sheet se respeta';
+  assert (select count(*) from tipo_cambio_sunat) = 4, 'se guardan todos los días';
+end $$;

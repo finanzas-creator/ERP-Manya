@@ -36,7 +36,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ GP agencia y por línea (cálculo)
 - ✅ Pantallas de GP agencia / línea / venta
 - ✅ Planilla y gastos: ver, agregar, editar, anular y copiar del mes anterior (planilla, herramientas, comisiones pagadas)
-- ✅ Cierre mensual y tipo de cambio desde Configuración (R-70) · ✅ pesos de Dirección validados en la base (R-62)
+- ✅ Cierre mensual y tipo de cambio desde Configuración (R-70) · ✅ TC venta SUNAT automático cada día (D-14) · ✅ pesos de Dirección validados en la base (R-62)
 - ✅ Estado de resultados de 12 meses (lo leen los tres roles)
 - ✅ Pauta: facturada vs consumida por mes y por contrato (R-64) · ⬜ cargar el consumo real desde mar 2026 (el sheet llega a feb 2026; ya se puede registrar en cada venta)
 - ⬜ GP por equipo y cliente (requiere unificar equipos de planilla y contratos)

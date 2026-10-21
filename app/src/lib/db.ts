@@ -30,7 +30,8 @@ export type Database = {
       servicio: { Row: { id: number; categoria_id: number; nombre: string; modalidad: Enums['modalidad']; naturaleza: Enums['naturaleza']; activo: boolean }; Insert: Partial<{ id: number; categoria_id: number; nombre: string; modalidad: Enums['modalidad']; naturaleza: Enums['naturaleza']; activo: boolean }>; Update: Partial<{ id: number; categoria_id: number; nombre: string; modalidad: Enums['modalidad']; naturaleza: Enums['naturaleza']; activo: boolean }>; Relationships: [] }
       servicio_contratado: { Row: { id: string; cliente_id: string; marca_id: string | null; servicio_id: number; estado: Enums['estado_servicio']; codigo_legacy: string | null; creado_en: string }; Insert: Partial<{ id: string; cliente_id: string; marca_id: string | null; servicio_id: number; estado: Enums['estado_servicio']; codigo_legacy: string | null; creado_en: string }>; Update: Partial<{ id: string; cliente_id: string; marca_id: string | null; servicio_id: number; estado: Enums['estado_servicio']; codigo_legacy: string | null; creado_en: string }>; Relationships: [] }
       sub_area: { Row: { id: number; nombre: string; grupo: Enums['grupo_costo']; linea_id: number | null }; Insert: Partial<{ id: number; nombre: string; grupo: Enums['grupo_costo']; linea_id: number | null }>; Update: Partial<{ id: number; nombre: string; grupo: Enums['grupo_costo']; linea_id: number | null }>; Relationships: [] }
-      tipo_cambio_mensual: { Row: { periodo: string; tc: number }; Insert: Partial<{ periodo: string; tc: number }>; Update: Partial<{ periodo: string; tc: number }>; Relationships: [] }
+      tipo_cambio_mensual: { Row: { periodo: string; tc: number; fuente: string | null }; Insert: Partial<{ periodo: string; tc: number; fuente: string | null }>; Update: Partial<{ periodo: string; tc: number; fuente: string | null }>; Relationships: [] }
+      tipo_cambio_sunat: { Row: { fecha: string; compra: number; venta: number; obtenido_en: string }; Insert: Partial<{ fecha: string; compra: number; venta: number; obtenido_en: string }>; Update: Partial<{ fecha: string; compra: number; venta: number; obtenido_en: string }>; Relationships: [] }
       usuario: { Row: { id: string; email: string; nombre: string | null; rol: Enums['rol']; activo: boolean }; Insert: Partial<{ id: string; email: string; nombre: string | null; rol: Enums['rol']; activo: boolean }>; Update: Partial<{ id: string; email: string; nombre: string | null; rol: Enums['rol']; activo: boolean }>; Relationships: [] }
       venta: { Row: { id: string; codigo: string; servicio_contratado_id: string; empresa_id: number | null; fecha_contrato: string; fecha_fin: string | null; periodo_servicio: string | null; descripcion: string | null; moneda: Enums['moneda']; monto_neto: number; pct_igv: number; equipo_id: number | null; partner_id: number | null; pct_comision: number; anulado_en: string | null; anulado_motivo: string | null; codigo_legacy: string | null; creado_en: string; modalidad: Enums['modalidad'] | null }; Insert: Partial<{ id: string; codigo: string; servicio_contratado_id: string; empresa_id: number | null; fecha_contrato: string; fecha_fin: string | null; periodo_servicio: string | null; descripcion: string | null; moneda: Enums['moneda']; monto_neto: number; pct_igv: number; equipo_id: number | null; partner_id: number | null; pct_comision: number; anulado_en: string | null; anulado_motivo: string | null; codigo_legacy: string | null; creado_en: string; modalidad: Enums['modalidad'] | null }>; Update: Partial<{ id: string; codigo: string; servicio_contratado_id: string; empresa_id: number | null; fecha_contrato: string; fecha_fin: string | null; periodo_servicio: string | null; descripcion: string | null; moneda: Enums['moneda']; monto_neto: number; pct_igv: number; equipo_id: number | null; partner_id: number | null; pct_comision: number; anulado_en: string | null; anulado_motivo: string | null; codigo_legacy: string | null; creado_en: string; modalidad: Enums['modalidad'] | null }>; Relationships: [] }
     }
@@ -76,6 +77,7 @@ export type Database = {
     }
     Functions: {
       a_usd: { Args: Record<string, unknown>; Returns: unknown }
+      actualizar_tc_sunat: { Args: Record<string, unknown>; Returns: unknown }
       agregar_cuota: { Args: Record<string, unknown>; Returns: unknown }
       anular: { Args: Record<string, unknown>; Returns: unknown }
       app_rol: { Args: Record<string, unknown>; Returns: unknown }
@@ -104,9 +106,11 @@ export type Database = {
       proteger_venta_facturada: { Args: Record<string, unknown>; Returns: unknown }
       registrar_auditoria: { Args: Record<string, unknown>; Returns: unknown }
       registrar_pago_comprobante: { Args: Record<string, unknown>; Returns: unknown }
+      registrar_tc_sunat: { Args: Record<string, unknown>; Returns: unknown }
       registrar_venta: { Args: Record<string, unknown>; Returns: unknown }
       renovar_venta: { Args: Record<string, unknown>; Returns: unknown }
       tc_de: { Args: Record<string, unknown>; Returns: unknown }
+      tolerancia_usd: { Args: Record<string, unknown>; Returns: unknown }
       yo: { Args: Record<string, unknown>; Returns: unknown }
     }
     Enums: {
