@@ -1,7 +1,13 @@
 # Manya ERP
 
 Sistema de gestión de la agencia Manya. Cubre ventas, plan de pagos, comprobantes,
-cobranza, renovaciones, comisiones y rentabilidad.
+cobranza, renovaciones, comisiones, costos (planilla, herramientas, proveedores, pauta) y
+rentabilidad. En producción: https://manya-erp.pages.dev
+
+Pantallas: Resumen · Clientes · Ventas · Cobranza (con cobros esperados) · Renovaciones · Pauta ·
+Estado de resultados · Rentabilidad · Planilla y gastos · Revisión de datos · Validación contra el
+sheet · Configuración (tipo de cambio, cierre mensual, parámetros, pesos de Dirección). El CEO ve
+Resumen y Estado de resultados.
 
 - **Qué hace y por qué:** [`spec/`](spec/README.md). Es la fuente de verdad del negocio.
 - **Reglas para quien programe (personas o IA):** [`CLAUDE.md`](CLAUDE.md).
