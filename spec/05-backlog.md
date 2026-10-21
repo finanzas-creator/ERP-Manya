@@ -10,6 +10,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Vistas de cálculo únicas (saldos, estados, ventas, ingresos, comisiones, GP)
 - ✅ Roles y permisos en la base (Administrador, Tesorería, CEO) + bitácora
 - ✅ Migración del sheet con reporte de anomalías
+- ✅ Pantalla Validación: cada mes, sistema vs sheet (ventas, planilla, herramientas, comisiones, consumo de pauta)
 - ✅ Pruebas de reglas + pruebas doradas contra el sheet (ventas, cobranza por cuota y por contrato, renovaciones, consumo de pauta, costos)
 - ✅ Pruebas automáticas en GitHub en cada cambio (reglas + compilación de la app)
 - ✅ Repositorio GitHub · ✅ proyecto Supabase con migraciones y datos (igual a local) · 🔄 usuarios en Auth (administrador invitado; faltan Tesorería y CEO) · ✅ hosting Cloudflare Pages (https://manya-erp.pages.dev) · ⬜ respaldos (plan Pro)

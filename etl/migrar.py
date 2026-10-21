@@ -720,6 +720,10 @@ def migrar(hojas):
         filas_c.append((uid("com", n), m.isoformat(), per_id[persona(r[2], "Comision de venta", n)], "PEN", monto))
     S.copy("comision_pago", ["id", "periodo", "persona_id", "moneda", "monto"], filas_c)
 
+    # --- totales oficiales del sheet, para la pantalla Validación (etl/referencias.py)
+    from referencias import todas
+    S.insert("referencia_sheet", ["periodo", "concepto", "detalle", "valor"], todas(hojas))
+
     for t in auditadas:
         S.raw(f"alter table {t} enable trigger {t}_auditoria;")
     for t in ["empresa", "linea_negocio", "categoria", "servicio", "equipo", "persona", "cuenta_bancaria",

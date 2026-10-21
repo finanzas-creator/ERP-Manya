@@ -14,7 +14,8 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from migrar import CATEGORIAS, fecha, leer, llave, num, registros, txt  # noqa: E402
+from migrar import fecha, leer, llave, num, registros, txt  # noqa: E402
+import referencias  # noqa: E402
 
 TOL = 0.01
 
@@ -49,15 +50,7 @@ class Resultado:
 
 def ventas_por_mes(hojas, db, R):
     """R-03/R-04: pestaña 'Ventas' (ventas por mes y tipo de servicio)."""
-    tabla = hojas["Ventas"]
-    meses = [m for m in tabla[0][1:] if m]
-    oficial = {}
-    for fila in tabla[1:]:
-        tipo = fila[0]
-        if tipo in CATEGORIAS:
-            for i, m in enumerate(meses):
-                y, mo, _ = str(m).split("-")
-                oficial[(f"{int(y):04d}-{int(mo):02d}", CATEGORIAS[tipo][0])] = num(fila[i + 1]) or 0.0
+    oficial = referencias.ventas_usd(hojas)
     sistema = {(p[:7], c): float(v) for p, c, v in
                query(db, "select periodo, categoria, sum(ventas_usd) from v_ventas_mes group by 1, 2")}
     difs = [(k, v, round(sistema.get(k, 0.0), 2)) for k, v in sorted(oficial.items())
@@ -121,37 +114,37 @@ def renovaciones(hojas, db, R, exc):
     R.check("Servicios por renovar y su vencimiento", "R-50", difs, len(oficial))
 
 
+def por_mes(nombre, regla, oficial, sistema, R):
+    """Compara {(mes, ''): valor} del sheet con {mes: valor} del sistema."""
+    difs = [(m, round(v, 2), round(sistema.get(m, 0), 2)) for (m, _), v in sorted(oficial.items())
+            if abs(sistema.get(m, 0) - v) > TOL]
+    R.check(nombre, regla, difs, len(oficial))
+
+
 def consumo_pauta(hojas, db, R):
     """R-64: pestaña 'Pauta' (costo de ejecución por mes de contrato) = consumo en el control de pauta."""
-    oficial = collections.defaultdict(float)
-    for r in hojas["Pauta"][1:]:
-        if fecha(r[0]) and num(r[5]):
-            oficial[fecha(r[0]).strftime("%Y-%m")] += num(r[5])
     sistema = {p: float(v) for p, v in query(db, """
         select to_char(fecha_contrato, 'YYYY-MM'), sum(consumo_usd) from v_control_pauta group by 1""")}
-    difs = [(m, round(v, 2), round(sistema.get(m, 0), 2)) for m, v in sorted(oficial.items())
-            if abs(sistema.get(m, 0) - v) > TOL]
-    R.check("Consumo de pauta por mes", "R-64", difs, len(oficial))
+    por_mes("Consumo de pauta por mes", "R-64", referencias.consumo_pauta_usd(hojas), sistema, R)
 
 
 def costos(hojas, db, R):
     """R-60: planilla, herramientas y comisiones por mes (en su moneda original)."""
     casos = [
-        ("Planilla (S/)", "Planilla", 27, 1, 25, "select periodo, sum(costo_total) from planilla group by 1"),
-        ("Herramientas (USD)", "Herramientas", 8, 0, 5, "select periodo, sum(monto) from herramienta_gasto group by 1"),
-        ("Comisiones de venta (S/)", "Comision de venta", 5, 1, 4,
-         "select periodo, sum(monto) from comision_pago group by 1"),
+        ("Planilla (S/)", referencias.planilla_pen, "select periodo, sum(costo_total) from planilla group by 1"),
+        ("Herramientas (USD)", referencias.herramientas_usd, "select periodo, sum(monto) from herramienta_gasto group by 1"),
+        ("Comisiones de venta (S/)", referencias.comisiones_pen, "select periodo, sum(monto) from comision_pago group by 1"),
     ]
-    for nombre, hoja, ncols, col_mes, col_monto, sql in casos:
-        oficial = collections.defaultdict(float)
-        for _, r in registros(hojas, hoja, ncols):
-            f, v = fecha(r[col_mes]), num(r[col_monto])
-            if f and v:
-                oficial[f.strftime("%Y-%m")] += v
+    for nombre, leer_oficial, sql in casos:
         sistema = {p[:7]: float(v) for p, v in query(db, sql)}
-        difs = [(m, round(v, 2), round(sistema.get(m, 0), 2)) for m, v in sorted(oficial.items())
-                if abs(sistema.get(m, 0) - v) > TOL]
-        R.check(nombre, "R-60", difs, len(oficial))
+        por_mes(nombre, "R-60", leer_oficial(hojas), sistema, R)
+
+
+def validacion(db, R):
+    """La pantalla Validación (v_validacion_mes) muestra todo cuadrado tras la carga."""
+    filas = query(db, "select periodo, concepto, sheet, sistema, cuadra from v_validacion_mes")
+    difs = [f[:4] for f in filas if f[4] != "t"]
+    R.check("Pantalla Validación: meses que cuadran", "R-04/R-60/R-64", difs, len(filas))
 
 
 def main():
@@ -164,6 +157,7 @@ def main():
     renovaciones(hojas, db, R, exc)
     consumo_pauta(hojas, db, R)
     costos(hojas, db, R)
+    validacion(db, R)
     sys.exit(1 if R.fallas else 0)
 
 

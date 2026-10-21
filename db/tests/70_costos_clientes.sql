@@ -46,3 +46,13 @@ begin
   assert (select count(*) from v_cliente) = 0, 'R-80 CEO no lee clientes';
 end $$;
 reset role;
+
+-- Validación: compara lo que decía el sheet con las mismas vistas de las pantallas
+insert into referencia_sheet (periodo, concepto, valor) values
+  ('2026-01-01', 'planilla_pen', 6375), ('2026-01-01', 'herramientas_usd', 999);
+do $$
+begin
+  assert (select cuadra from v_validacion_mes where periodo = '2026-01-01' and concepto = 'planilla_pen'), 'planilla cuadra';
+  assert not (select cuadra from v_validacion_mes where periodo = '2026-01-01' and concepto = 'herramientas_usd'), 'herramientas no cuadra';
+  assert (select diferencia from v_validacion_mes where periodo = '2026-01-01' and concepto = 'herramientas_usd') = -999, 'diferencia (las herramientas de enero se anularon arriba)';
+end $$;

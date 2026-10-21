@@ -30,6 +30,7 @@ COSTOS
 
 CONTROL
   usuario (rol) · auditoria · cierre_mensual
+  referencia_sheet (totales que reportaba el sheet al migrar: un hecho, para validar)
 ```
 
 ## Qué se calcula (vistas)
@@ -52,6 +53,7 @@ CONTROL
 | `v_planilla_grupo_mes` | Planilla del mes por tipo de recibo y por área | R-60 |
 | `v_ventas_cliente_mes` | Ventas del mes por cliente (top clientes) | R-04 |
 | `v_control_pauta_mes` | Pauta facturada vs consumida por mes | R-64 |
+| `v_validacion_mes` | Cada mes, el total del sistema vs el que reportaba el sheet (`referencia_sheet`) | R-04, R-60, R-64 |
 | `v_cliente` | Ficha del cliente: servicios activos, ventas 12 meses, por cobrar, vencido | R-33, R-52 |
 | `v_kpi_mes`, `v_kpi_hoy`, `v_kpi_linea_mes`, `v_kpi_gp_mes`, `v_kpi_ingresos_mes`, `v_kpi_ventas_categoria_mes`, `v_kpi_ventas_cliente_mes`, `v_kpi_pauta_mes` | Indicadores de lectura para los tres roles (el CEO no lee tablas operativas) | R-80 |
 
