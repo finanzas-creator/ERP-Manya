@@ -4,10 +4,10 @@ Cada regla tiene un ID. El código y las pruebas citan el ID. Los valores marcad
 como *(config)* se cambian en Configuración, no en el código.
 
 ## Ventas e ingresos
-- **R-01** Una venta es un ciclo mensual o un proyecto de un servicio contratado. Su monto es **neto** (sin IGV) en su moneda (USD o PEN).
-- **R-02** La modalidad (mensual / proyecto) y la naturaleza (propio / terceros) son atributos del **servicio en el catálogo**. Nunca se deducen del nombre.
+- **R-01** Una venta es un ciclo mensual o un proyecto de un servicio contratado. Su monto es el **precio al cliente**, **neto** (sin IGV), en su moneda (USD o PEN): es lo que se planifica, factura y cobra. Si parte del trabajo lo hace un proveedor, su costo se registra aparte como **costo de proveedor** de la venta.
+- **R-02** La modalidad (mensual / proyecto) y la naturaleza (propio / terceros) son atributos del **servicio en el catálogo**. Nunca se deducen del nombre. La modalidad del catálogo es la sugerida: cada venta puede fijar otra (decisión del contrato; p. ej. un sitio web por suscripción mensual), y al renovar se conserva.
 - **R-03** Servicios de **terceros** (Pauta, Influencers) se planifican, facturan y cobran, pero **no son venta ni ingreso**. Las comisiones sobre ellos sí lo son.
-- **R-04** **Ventas del mes** = suma del monto neto en USD de las ventas no anuladas y de naturaleza propia cuya **fecha de contrato** cae en ese mes.
+- **R-04** **Ventas del mes** = suma de la **venta neta** en USD (monto − costos de proveedor) de las ventas no anuladas y de naturaleza propia cuya **fecha de contrato** cae en ese mes.
 - **R-05** **Ingresos del mes** (devengado), ventas no anuladas y propias:
   - mensual → todo en su **periodo de servicio** (por defecto, el mes de la fecha de contrato; editable);
   - proyecto → el monto se reparte en partes iguales entre los meses desde la fecha de inicio hasta la fecha de entrega (ambos incluidos). Sin fecha de entrega, todo cae en el mes de inicio.
@@ -48,7 +48,7 @@ como *(config)* se cambian en Configuración, no en el código.
 
 ## Costos y rentabilidad (de macro a micro)
 - **R-60** Los costos en PEN (planilla, comisiones, herramientas en soles) se convierten con el TC del mes.
-- **R-61** **GP agencia** = ingresos − costos directos de ventas − planilla − herramientas − comisiones pagadas.
+- **R-61** **GP agencia** = ingresos − costos directos de ventas (costos de proveedor) − planilla − herramientas − comisiones pagadas. El costo de proveedor se resta una sola vez: aquí, no en los ingresos.
 - **R-62** **GP por línea**: ingresos por línea; costos directos a la línea de su venta; planilla por sub-área → línea; Dirección se reparte por pesos *(config)*; herramientas por participación en el ingreso; el overhead (Administración, Comercial, RR.HH.) queda a nivel agencia.
 - **R-63** **GP por equipo, cliente y venta**: el costo de planilla de cada equipo se reparte entre las ventas del equipo según su participación en el ingreso del mes. Ventas sin equipo quedan en "Sin equipo".
 - **R-64** Diferencia de pauta = pauta facturada − consumo real. Es un control, no entra al GP.

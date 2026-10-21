@@ -47,6 +47,12 @@ def clave(v):
     return s.lower()
 
 
+def llave(v):
+    """Código del sheet tal como lo enlaza Google Sheets (BUSCARV, SUMAR.SI): sin distinguir
+    mayúsculas ni espacios repetidos (D-19)."""
+    return (txt(v) or "").casefold()
+
+
 def num(v):
     if isinstance(v, bool) or v is None:
         return None
@@ -242,6 +248,11 @@ class Salida:
 
 
 # ---------------------------------------------------------------- migración
+def modalidad_fila(r):
+    """Modalidad de una fila de Contratos según el sheet (columna 'Siguiente Ciclo?')."""
+    return "proyecto" if r[9] == "Es un proyecto" else "mensual"
+
+
 def migrar(hojas):
     S = Salida()
     S.raw("begin;")
@@ -280,7 +291,7 @@ def migrar(hojas):
             continue
         k = (tipo, clave(sv))
         variantes[k][sv] += 1
-        proyecto[k][r[9] == "Es un proyecto"] += 1
+        proyecto[k][modalidad_fila(r) == "proyecto"] += 1
     srv_id, srv_modalidad, srv_naturaleza, filas_srv = {}, {}, {}, []
     for i, (k, var) in enumerate(sorted(variantes.items())):
         sid = i + 1
@@ -424,7 +435,7 @@ def migrar(hojas):
             A.add("contrato incompleto", "Contratos", n, f"{r[0]} / {r[2]} / {r[3]}", "fila omitida")
     grupos = collections.defaultdict(list)
     for n, r in validos:
-        k = (txt(r[1]) or txt(r[0]), clave(r[3]), txt(r[5]), clave(r[6]))
+        k = (llave(r[1]) or llave(r[0]), clave(r[3]), txt(r[5]), clave(r[6]))  # D-19
         grupos[k].append((n, r))
     multi = collections.Counter(k[0] for k in grupos)
     for k, cnt in multi.items():
@@ -436,7 +447,7 @@ def migrar(hojas):
     igv_lineas = collections.defaultdict(list)
     for _, r in plan:
         if txt(r[1]) and num(r[3]):
-            igv_lineas[r[1]].append((num(r[4]) or 0) / num(r[3]))
+            igv_lineas[llave(r[1])].append((num(r[4]) or 0) / num(r[3]))
     igv_de_cuotas = {k: (0.0 if all(abs(x) < 1e-6 for x in v) else 0.18) for k, v in igv_lineas.items()}
 
     filas_sc, filas_venta, filas_cd = [], [], []
@@ -447,19 +458,26 @@ def migrar(hojas):
         sck = (k[1], k[2], k[3])
         scid = uid("sc", *k)
         ultima = filas[-1][1]
-        mod = srv_modalidad[(k[2], k[3])]
-        if mod == "mensual":
+        mod_catalogo = srv_modalidad[(k[2], k[3])]
+        if modalidad_fila(ultima) == "mensual":
             estado = "finalizado" if ultima[9] == "No se renueva" else "activo"
+            fin = fecha(ultima[9])
+            if estado == "activo" and (fin is None or fin < HOY):
+                A.add("servicio mensual sin ciclo vigente", "Contratos", filas[-1][0],
+                      f"{txt(ultima[1])}: {ultima[10]} hasta {fin}", "queda en renovaciones vencidas; revisar")
         else:
             fin = fecha(ultima[12])
             estado = "activo" if (fin is None or fin >= HOY) and fecha(ultima[2]) >= HOY - dt.timedelta(days=180) \
                 else "finalizado"
-        legacy_sc = k[0] if multi[k[0]] == 1 else f"{k[0]} · {txt(ultima[3])} · {CATEGORIAS[k[2]][0]} · {txt(ultima[6])}"
+        nombre_sc = txt(ultima[1]) or txt(ultima[0])
+        legacy_sc = nombre_sc if multi[k[0]] == 1 else \
+            f"{nombre_sc} · {txt(ultima[3])} · {CATEGORIAS[k[2]][0]} · {txt(ultima[6])}"
         filas_sc.append((scid, cli_id[k[1]], marca_id.get((k[1], clave(ultima[4]))),
                          srv_id[(k[2], k[3])], estado, legacy_sc))
         for n, r in filas:
             vid = uid("venta", r[0])
             f0 = fecha(r[2])
+            mod = modalidad_fila(r)  # R-02/D-21: la del contrato; se guarda solo si difiere del catálogo
             if mod == "proyecto":
                 ffin = fecha(r[12])
             else:
@@ -467,27 +485,23 @@ def migrar(hojas):
             if ffin and ffin < f0:
                 A.add("fecha fin anterior a fecha de contrato", "Contratos", n, f"{f0} -> {ffin}", "fecha fin vacía")
                 ffin = None
-            monto = num(r[15])
+            prov = num(r[14]) or 0.0
+            monto = num(r[13])  # R-01/D-20: precio al cliente ("Costo neto"); la venta neta se calcula
             if monto is None:
-                A.add("monto neto no numérico", "Contratos", n, r[15], "monto 0")
-                monto = 0.0
+                monto = (num(r[15]) or 0.0) + prov
+                A.add("costo neto vacío", "Contratos", n, r[0], "monto neto de venta + costo de proveedor")
+            elif num(r[15]) is not None and abs(monto - prov - num(r[15])) > 0.01:
+                A.add("costo neto − proveedor distinto de monto neto de venta", "Contratos", n,
+                      f"{monto} - {prov} vs {r[15]}", "se usa costo neto como precio")
             if monto < 0:
                 A.add("monto neto negativo", "Contratos", n, monto, "fila omitida")
                 continue
             pigv = num(r[16])
             if pigv is None:
-                pigv = igv_de_cuotas.get(r[0], 0.18)
+                pigv = igv_de_cuotas.get(llave(r[0]), 0.18)
                 A.add("% IGV vacío", "Contratos", n, r[0], f"se infiere de sus cuotas: {pigv:.0%}")
             elif pigv not in (0.0, 0.18):
                 A.add("% IGV inusual", "Contratos", n, f"{r[0]}: {pigv}", "se conserva; revisar")
-            costo_neto = num(r[13])
-            if costo_neto is not None and abs(costo_neto - monto) > 0.01:
-                A.add("costo neto distinto de monto neto", "Contratos", n, f"{costo_neto} vs {monto}",
-                      "se usa monto neto de venta")
-            if (r[9] == "Es un proyecto") != (mod == "proyecto"):
-                A.add("modalidad de la fila distinta a la del servicio", "Contratos", n,
-                      f"{r[0]} ({'proyecto' if r[9] == 'Es un proyecto' else 'mensual'} vs {mod})",
-                      "se aplica la modalidad del servicio")
             p = persona(r[24], "Contratos", n)
             e = equipo(r[27], "Contratos", n)
             if p:
@@ -495,15 +509,14 @@ def migrar(hojas):
             if e:
                 equipos_usados.add(e)
             pct = num(r[25]) or 0.0
-            if r[0] in venta_de_legacy:
+            if llave(r[0]) in venta_de_legacy:
                 A.add("ID de contrato duplicado", "Contratos", n, r[0], "fila omitida")
                 continue
-            venta_de_legacy[r[0]] = vid
+            venta_de_legacy[llave(r[0])] = vid
             venta_info[vid] = {"pct_igv": pigv, "cliente": k[1], "fecha": f0, "naturaleza": srv_naturaleza[(k[2], k[3])]}
             filas_venta.append([vid, scid, f0.isoformat(), ffin.isoformat() if ffin else None, txt(r[7]), "USD",
-                                monto, pigv, e, p, pct, r[0]])
-            prov = num(r[14])
-            if prov and prov > 0:
+                                monto, pigv, e, p, pct, r[0], mod if mod != mod_catalogo else None])
+            if prov > 0:
                 filas_cd.append((uid("cd", r[0], "prov"), vid, "proveedor", f0.isoformat(), "USD", prov,
                                  "Costo de proveedores (sheet)"))
             consumo = num(r[28])
@@ -529,7 +542,8 @@ def migrar(hojas):
         f[8] = eq_id.get(f[8])
         f[9] = per_id.get(f[9])
     S.copy("venta", ["id", "servicio_contratado_id", "fecha_contrato", "fecha_fin", "descripcion", "moneda",
-                     "monto_neto", "pct_igv", "equipo_id", "partner_id", "pct_comision", "codigo_legacy"], filas_venta)
+                     "monto_neto", "pct_igv", "equipo_id", "partner_id", "pct_comision", "codigo_legacy", "modalidad"],
+           filas_venta)
     S.copy("costo_directo", ["id", "venta_id", "tipo", "fecha", "moneda", "monto", "descripcion"], filas_cd)
 
     # --- comprobantes y cuotas
@@ -547,12 +561,12 @@ def migrar(hojas):
     for n, r in plan:
         if not txt(r[1]):
             continue
-        vid = venta_de_legacy.get(r[1])
+        vid = venta_de_legacy.get(llave(r[1]))
         if not vid:
             A.add("línea de facturación sin contrato", "Plan de facturacion", n, r[0], "línea omitida")
             continue
-        if r[0] in cuota_por_codigo:  # D-18: mismo código = misma cuota; se suman neto e IGV
-            primera, vid_primera = cuota_por_codigo[r[0]]
+        if llave(r[0]) in cuota_por_codigo:  # D-18: mismo código = misma cuota; se suman neto e IGV
+            primera, vid_primera = cuota_por_codigo[llave(r[0])]
             iguales = vid == vid_primera and primera[2] == r[2] and primera[6:11] == r[6:11]
             A.add("línea repetida" if iguales else "línea repetida con datos distintos",
                   "Plan de facturacion", n, r[0], "se suma a la primera" + ("" if iguales else "; revisar"))
@@ -560,7 +574,7 @@ def migrar(hojas):
                 primera[i] = (num(primera[i]) or 0.0) + (num(r[i]) or 0.0)
             continue
         r = list(r)
-        cuota_por_codigo[r[0]] = (r, vid)
+        cuota_por_codigo[llave(r[0])] = (r, vid)
         cuotas_validas.append((n, r, vid))
         nro = txt(r[8])
         tipo = TIPOS.get(clave(r[7]))
@@ -577,7 +591,7 @@ def migrar(hojas):
         if nro.upper().startswith("MS"):
             A.add("serie con prefijo desconocido", "Plan de facturacion", n, nro, "asignado a Templates; revisar")
         if tipo == "comanda":
-            key = ("comanda", r[0])
+            key = ("comanda", llave(r[0]))
         else:
             key = (empresa, tipo, serie)
         lineas_por_comp[key].append((n, r, vid, empresa, tipo, serie))
@@ -610,7 +624,7 @@ def migrar(hojas):
                                min(emisiones).isoformat(), min(limites).isoformat() if limites else None,
                                pdet, autod))
             for l in ls:
-                comp_de_linea[l[1][0]] = cid
+                comp_de_linea[llave(l[1][0])] = cid
     S.copy("comprobante", ["id", "empresa_id", "tipo", "serie_numero", "fecha_emision", "fecha_limite",
                            "pct_detraccion", "autodetraccion_fecha"], filas_comp)
 
@@ -620,7 +634,7 @@ def migrar(hojas):
     for n, r, vid in cuotas_validas:
         orden[vid] += 1
         qid = uid("cuota", r[0])
-        cuota_de_linea[r[0]] = qid
+        cuota_de_linea[llave(r[0])] = qid
         monto = num(r[3])
         if monto is None:
             A.add("monto de cuota no numérico", "Plan de facturacion", n, r[0], "monto 0")
@@ -633,14 +647,14 @@ def migrar(hojas):
             A.add("IGV de la cuota no coincide con % de la venta", "Plan de facturacion", n,
                   f"{r[0]}: {igv_sheet}", "se usa % de la venta")
         filas_cuota.append((qid, vid, orden[vid], txt(r[2]) or "Cuota", monto,
-                            fecha(r[9]).isoformat() if fecha(r[9]) else None, comp_de_linea.get(r[0]), r[0]))
+                            fecha(r[9]).isoformat() if fecha(r[9]) else None, comp_de_linea.get(llave(r[0])), r[0]))
     S.copy("cuota", ["id", "venta_id", "orden", "concepto", "monto_neto", "fecha_limite", "comprobante_id",
                      "codigo_legacy"], filas_cuota)
 
     # --- pagos
     filas_pago = []
     for n, r in pagos:
-        qid = cuota_de_linea.get(r[0])
+        qid = cuota_de_linea.get(llave(r[0]))
         if not qid:
             A.add("pago sin línea de facturación", "Pagos de facturas", n, r[0], "pago omitido")
             continue

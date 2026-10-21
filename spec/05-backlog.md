@@ -9,7 +9,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Vistas de cálculo únicas (saldos, estados, ventas, ingresos, comisiones, GP)
 - ✅ Roles y permisos en la base (Administrador, Tesorería, CEO) + bitácora
 - ✅ Migración del sheet con reporte de anomalías
-- ✅ Pruebas de reglas + pruebas doradas contra el sheet
+- ✅ Pruebas de reglas + pruebas doradas contra el sheet (ventas, cobranza por cuota y por contrato, renovaciones, consumo de pauta, costos)
 - ✅ Pruebas automáticas en GitHub en cada cambio (reglas + compilación de la app)
 - ✅ Repositorio GitHub · ✅ proyecto Supabase con migraciones y datos (igual a local) · ⬜ usuarios en Auth · ⬜ hosting Cloudflare Pages · ⬜ respaldos (plan Pro)
 
@@ -20,6 +20,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Renovaciones: lista por vencer + renovar en un clic (R-51)
 - ✅ Finalizar servicio contratado (R-52)
 - ✅ Generar plan de pagos para ventas que no lo tienen
+- ✅ Modalidad por venta (R-02, D-21) · ⬜ elegirla en la pantalla de registrar venta (hoy toma la del catálogo)
 
 ## R2 · Facturación y cobranza
 - ✅ Emitir comprobante agrupando cuotas (detracción sugerida por R-22)
@@ -44,4 +45,5 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ⬜ Integración SUNAT API SIRE (RVIE): importar comprobantes emitidos de ambas empresas
 - ⬜ Reclasificación del catálogo a la taxonomía BD_MAD
 - ⬜ Control de pauta con consumo real (ManyaPulse)
+- ⬜ Control de pauta: hoy incluye influencers (terceros sin consumo registrado); decidir si se excluyen
 - ⬜ Alertas (vencimientos, renovaciones)
