@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ok, okONulo, supabase } from '../lib/supabase'
 import { finDeMes, mesActual, mesLargo, pct, sumarMeses, usd } from '../lib/formato'
-import { Boton, Card, Kpi, Tabla, Titulo } from '../components/ui'
+import { Card, Kpi, Nota, SelectorMes, Tabla, Titulo } from '../components/ui'
 
 export default function Rentabilidad() {
   const [mes, setMes] = useState(sumarMeses(mesActual(), -1))
@@ -24,11 +24,7 @@ export default function Rentabilidad() {
 
   return (
     <>
-      <Titulo accion={<div className="flex items-center gap-2">
-        <Boton onClick={() => setMes(sumarMeses(mes, -1))} aria-label="Mes anterior">‹</Boton>
-        <span className="w-24 text-center text-sm font-medium">{mesLargo(mes)}</span>
-        <Boton onClick={() => setMes(sumarMeses(mes, 1))} aria-label="Mes siguiente">›</Boton>
-      </div>}>Rentabilidad</Titulo>
+      <Titulo accion={<SelectorMes mes={mes} onCambio={setMes} />}>Rentabilidad</Titulo>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Ingresos" valor={usd(a?.ingresos_usd)} detalle="por mes de ejecución" />
@@ -48,7 +44,7 @@ export default function Rentabilidad() {
           { titulo: 'GP', derecha: true, celda: (l) => <b className={(l.gp_usd ?? 0) < 0 ? 'text-critical' : ''}>{usd(l.gp_usd)}</b> },
           { titulo: 'Margen', derecha: true, celda: (l) => pct(margen(l.gp_usd, l.ingreso_usd)) },
         ]} />
-        <p className="border-t border-line px-4 py-2 text-xs text-t3">Dirección se reparte por pesos; herramientas y comisiones por participación en el ingreso; Overhead (administración, comercial, RR.HH.) queda a nivel agencia. Las líneas + overhead suman el GP de la agencia (R-62).</p>
+        <Nota>Dirección se reparte por pesos; herramientas y comisiones por participación en el ingreso; Overhead (administración, comercial, RR.HH.) queda a nivel agencia. Las líneas + overhead suman el GP de la agencia (R-62).</Nota>
       </Card>
 
       <Card titulo={`Ventas de ${mesLargo(mes)} · GP de vida de cada venta`} className="mt-4">
@@ -61,7 +57,7 @@ export default function Rentabilidad() {
           { titulo: 'GP', derecha: true, celda: (v) => <b className={(v.gp_usd ?? 0) < 0 ? 'text-critical' : ''}>{usd(v.gp_usd)}</b> },
           { titulo: 'Margen', derecha: true, celda: (v) => pct(margen(v.gp_usd, v.ingreso_usd)) },
         ]} />
-        <p className="border-t border-line px-4 py-2 text-xs text-t3">Costo asignado = costo indirecto de su línea repartido por participación en el ingreso de cada mes (R-63). GP por equipo llegará cuando se unifiquen los equipos de planilla y contratos.</p>
+        <Nota>Costo asignado = costo indirecto de su línea repartido por participación en el ingreso de cada mes (R-63). GP por equipo llegará cuando se unifiquen los equipos de planilla y contratos.</Nota>
       </Card>
     </>
   )

@@ -22,4 +22,6 @@ export const useCuentas = catalogo('cuentas', () =>
   supabase.from('cuenta_bancaria').select('id, nombre, moneda, es_detraccion').eq('activo', true).order('nombre'))
 export const useEmpresas = catalogo('empresas', () =>
   supabase.from('empresa').select('id, nombre').order('id'))
+export const useSubAreas = catalogo('sub_areas', () =>
+  supabase.from('sub_area').select('id, nombre, grupo').order('nombre'))
 export const useConfig = catalogo('config', () => supabase.from('config').select('*').single())

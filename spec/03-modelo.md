@@ -48,7 +48,12 @@ CONTROL
 | `v_costos_mes` | Planilla, herramientas, comisiones y directos en USD | R-60 |
 | `v_gp_agencia_mes` → `v_gp_linea_mes` → `v_gp_venta` | GP de macro a micro (cuadran entre sí) | R-61–R-63 |
 | `v_control_pauta` | Pauta facturada vs consumida | R-64 |
-| `v_kpi_mes`, `v_kpi_hoy`, `v_kpi_linea_mes` | Indicadores para el CEO | R-80 |
+| `v_planilla_usd`, `v_herramienta_usd`, `v_comision_pago_usd` | Detalle de cada costo con su monto en USD (única conversión) | R-60 |
+| `v_planilla_grupo_mes` | Planilla del mes por tipo de recibo y por área | R-60 |
+| `v_ventas_cliente_mes` | Ventas del mes por cliente (top clientes) | R-04 |
+| `v_control_pauta_mes` | Pauta facturada vs consumida por mes | R-64 |
+| `v_cliente` | Ficha del cliente: servicios activos, ventas 12 meses, por cobrar, vencido | R-33, R-52 |
+| `v_kpi_mes`, `v_kpi_hoy`, `v_kpi_linea_mes`, `v_kpi_gp_mes`, `v_kpi_ingresos_mes`, `v_kpi_ventas_categoria_mes`, `v_kpi_ventas_cliente_mes`, `v_kpi_pauta_mes` | Indicadores de lectura para los tres roles (el CEO no lee tablas operativas) | R-80 |
 
 ## Equivalencias con el sheet
 

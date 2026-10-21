@@ -15,3 +15,5 @@ create or replace function auth.uid() returns uuid language sql stable as $$
                 (current_setting('request.jwt.claims', true)::jsonb ->> 'sub')), '')::uuid
 $$;
 grant usage on schema public to anon, authenticated;
+-- Igual que Supabase: sin JIT (en estas consultas su compilación cuesta más de lo que ahorra).
+do $$ begin execute format('alter database %I set jit = off', current_database()); end $$;

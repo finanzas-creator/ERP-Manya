@@ -43,3 +43,18 @@ begin
   perform anular('venta', nueva, 'renovación duplicada');
   assert not exists (select 1 from v_venta where id = nueva), 'R-81 anulada no aparece';
 end $$;
+
+-- R-02: al registrar, la venta guarda su modalidad solo si difiere de la del catálogo
+do $$
+declare v1 uuid; v2 uuid;
+begin
+  v1 := registrar_venta(p_cliente => '00000000-0000-0000-0000-0000000000c2', p_servicio => 2,
+                        p_fecha_contrato => '2026-05-01', p_monto_neto => 500, p_plantilla => 1::smallint,
+                        p_modalidad => 'mensual');
+  v2 := registrar_venta(p_cliente => '00000000-0000-0000-0000-0000000000c2', p_servicio => 2,
+                        p_fecha_contrato => '2026-05-01', p_monto_neto => 500, p_plantilla => 1::smallint,
+                        p_modalidad => 'proyecto');
+  assert (select modalidad from venta where id = v1) = 'mensual', 'R-02 modalidad fijada en el contrato';
+  assert (select modalidad from venta where id = v2) is null, 'R-02 igual al catálogo: no se guarda';
+  assert (select modalidad from v_venta_base where id = v1) = 'mensual', 'R-02 la vista usa la de la venta';
+end $$;

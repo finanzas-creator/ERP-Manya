@@ -4,6 +4,7 @@ Estado: ✅ hecho · 🔄 en curso · ⬜ pendiente. Cada ítem se acepta cuando
 prueba y la vista previa fue validada por el dueño de producto.
 
 ## R0 · Fundaciones
+- ✅ Rendimiento: permisos evaluados una vez por consulta (la lista de ventas bajó de 13 s a 0.1 s en Supabase)
 - ✅ Spec v1 (glosario, reglas, modelo, decisiones)
 - ✅ Esquema de datos con catálogos, anulación y cierre mensual
 - ✅ Vistas de cálculo únicas (saldos, estados, ventas, ingresos, comisiones, GP)
@@ -14,13 +15,13 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Repositorio GitHub · ✅ proyecto Supabase con migraciones y datos (igual a local) · 🔄 usuarios en Auth (administrador invitado; faltan Tesorería y CEO) · ✅ hosting Cloudflare Pages (https://manya-erp.pages.dev) · ⬜ respaldos (plan Pro)
 
 ## R1 · Ventas y plan de pagos
-- ✅ Clientes (alta desde la venta) · ⬜ edición de clientes y marcas
+- ✅ Clientes (alta desde la venta) · ✅ lista y ficha de cliente (deuda, servicios, ventas) · ✅ edición de clientes y marcas
 - ✅ Registrar venta (servicio contratado + ciclo) con plantilla de pago → cuotas
 - ✅ Editar, agregar y anular cuotas; lo facturado solo lo corrige el administrador (R-13, R-14)
 - ✅ Renovaciones: lista por vencer + renovar en un clic (R-51)
 - ✅ Finalizar servicio contratado (R-52)
 - ✅ Generar plan de pagos para ventas que no lo tienen
-- ✅ Modalidad por venta (R-02, D-21) · ⬜ elegirla en la pantalla de registrar venta (hoy toma la del catálogo)
+- ✅ Modalidad por venta (R-02, D-21) · ✅ elegirla al registrar la venta
 
 ## R2 · Facturación y cobranza
 - ✅ Emitir comprobante agrupando cuotas (detracción sugerida por R-22)
@@ -33,12 +34,14 @@ prueba y la vista previa fue validada por el dueño de producto.
 ## R3 · Rentabilidad
 - ✅ GP agencia y por línea (cálculo)
 - ✅ Pantallas de GP agencia / línea / venta
-- ⬜ Carga mensual de planilla, herramientas y comisiones pagadas
-- ⬜ Cierre mensual desde la interfaz
+- ✅ Planilla y gastos: ver, agregar, editar, anular y copiar del mes anterior (planilla, herramientas, comisiones pagadas)
+- ✅ Cierre mensual y tipo de cambio desde Configuración (R-70) · ✅ pesos de Dirección validados en la base (R-62)
+- ✅ Estado de resultados de 12 meses (lo leen los tres roles)
+- ✅ Pauta: facturada vs consumida por mes y por contrato (R-64) · ⬜ cargar el consumo real desde mar 2026 (el sheet llega a feb 2026)
 - ⬜ GP por equipo y cliente (requiere unificar equipos de planilla y contratos)
 
 ## R4 · Insights
-- ✅ Dashboard CEO: ventas, ingresos, recurrente, cobrado, GP, margen, cartera
+- ✅ Dashboard: ventas, ingresos, recurrente, facturado, cobrado, GP, margen, cartera en dos miradas, ventas por categoría, top clientes, estructura de costos; cada tarjeta muestra cómo se calcula
 - ⬜ Retención de clientes, concentración top 5, DSO, forecast de caja 90 días
 
 ## Después
@@ -47,3 +50,4 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ⬜ Control de pauta con consumo real (ManyaPulse)
 - ⬜ Registrar el costo real de influencers y otros costos directos desde la interfaz (el sheet no lo tiene; se mantienen en el control de pauta)
 - ⬜ Alertas (vencimientos, renovaciones)
+- ⬜ Tipo de recibo y forma de pago de la planilla como catálogos (hoy texto con sugerencias)

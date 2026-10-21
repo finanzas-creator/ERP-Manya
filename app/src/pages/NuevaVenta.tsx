@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useClientes, useConfig, useEquipos, useMarcas, usePersonas, usePlantillas, useServicios } from '../lib/catalogos'
 import { ok, supabase } from '../lib/supabase'
 import { hoyISO } from '../lib/formato'
@@ -16,13 +16,16 @@ export default function NuevaVenta() {
   const { data: personas } = usePersonas()
   const { data: plantillas } = usePlantillas()
   const { data: config } = useConfig()
+  const [params] = useSearchParams()
 
   const [f, setF] = useState({
-    cliente: '', clienteNuevo: '', marca: '', servicio: '', fecha: hoyISO(), fin: '', descripcion: '',
+    cliente: params.get('cliente') ?? '', modalidad: '', clienteNuevo: '', marca: '', servicio: '', fecha: hoyISO(), fin: '', descripcion: '',
     moneda: 'USD', monto: '', igv: '', equipo: '', partner: '', comision: '', plantilla: '',
   })
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
   const servicio = servicios?.find((s) => String(s.id) === f.servicio)
+  // R-02: la modalidad del catálogo es la sugerida; el contrato puede fijar otra
+  const modalidad = f.modalidad || servicio?.modalidad
   const cliente = clientes?.find((c) => c.id === f.cliente)
   const marcasCliente = useMemo(() => marcas?.filter((m) => m.cliente_id === f.cliente) ?? [], [marcas, f.cliente])
   // R-12: IGV por defecto según el cliente; se muestra y puede cambiarse
@@ -42,6 +45,7 @@ export default function NuevaVenta() {
         p_descripcion: f.descripcion || null, p_moneda: f.moneda,
         p_pct_igv: f.igv === '' ? null : Number(f.igv) / 100, p_equipo: f.equipo ? Number(f.equipo) : null,
         p_partner: f.partner ? Number(f.partner) : null, p_pct_comision: f.comision ? Number(f.comision) / 100 : 0,
+        p_modalidad: modalidad ?? null,
       })) as string
     },
     onSuccess: (id) => { qc.invalidateQueries(); navigate(`/ventas/${id}`) },
@@ -67,14 +71,20 @@ export default function NuevaVenta() {
                   {marcasCliente.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                 </Select>
               </Campo>}
-          <Campo label="Servicio" ayuda={servicio && `${servicio.modalidad === 'proyecto' ? 'Proyecto' : 'Mensual'}${servicio.naturaleza === 'terceros' ? ' · de terceros (no es venta)' : ''}`}>
-            <Select value={f.servicio} onChange={set('servicio')}>
+          <Campo label="Servicio" ayuda={servicio?.naturaleza === 'terceros' ? 'De terceros: se factura pero no es venta (R-03)' : undefined}>
+            <Select value={f.servicio} onChange={(e) => setF({ ...f, servicio: e.target.value, modalidad: '' })}>
               <option value="">Seleccionar…</option>
               {servicios?.map((s) => <option key={s.id} value={s.id}>{s.nombre} — {(s.categoria as unknown as { nombre: string })?.nombre}</option>)}
             </Select>
           </Campo>
+          <Campo label="Modalidad" ayuda={servicio ? `Sugerida por el catálogo: ${servicio.modalidad}` : 'Elige primero el servicio'}>
+            <Select value={modalidad ?? ''} onChange={set('modalidad')} disabled={!servicio}>
+              <option value="mensual">Mensual (se renueva cada ciclo)</option>
+              <option value="proyecto">Proyecto (ingreso repartido hasta la entrega)</option>
+            </Select>
+          </Campo>
           <Campo label="Fecha de contrato / inicio"><Input type="date" value={f.fecha} onChange={set('fecha')} /></Campo>
-          <Campo label={servicio?.modalidad === 'proyecto' ? 'Fecha de entrega' : 'Fin del ciclo (siguiente renovación)'}>
+          <Campo label={modalidad === 'proyecto' ? 'Fecha de entrega' : 'Fin del ciclo (siguiente renovación)'}>
             <Input type="date" value={f.fin} onChange={set('fin')} />
           </Campo>
           <Campo label="Moneda">

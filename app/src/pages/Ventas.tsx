@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ok, supabase } from '../lib/supabase'
-import { dinero, fecha, finDeMes, mesActual, mesLargo, sumarMeses, usd } from '../lib/formato'
-import { Boton, Card, Estado, Input, Select, Tabla, Titulo } from '../components/ui'
+import { dinero, fecha, finDeMes, mesActual, usd } from '../lib/formato'
+import { Boton, Card, Estado, Input, Select, SelectorMes, Tabla, Titulo } from '../components/ui'
+import { Icono } from '../components/iconos'
 
 const COLS = 'id, codigo, fecha_contrato, cliente, marca, servicio, categoria, modalidad, naturaleza, moneda, monto_neto, monto_neto_usd, estado_plan, estado_cobro, saldo'
 
 export default function Ventas() {
   const navigate = useNavigate()
-  const [mes, setMes] = useState(mesActual())
+  const [params] = useSearchParams()
+  const [mes, setMes] = useState(params.get('mes') ?? mesActual())
   const [texto, setTexto] = useState('')
   const [estado, setEstado] = useState('')
 
@@ -26,11 +28,9 @@ export default function Ventas() {
 
   return (
     <>
-      <Titulo accion={<Link to="/ventas/nueva"><Boton variante="primario">+ Nueva venta</Boton></Link>}>Ventas</Titulo>
+      <Titulo accion={<Link to="/ventas/nueva"><Boton variante="primario"><Icono nombre="mas" />Nueva venta</Boton></Link>}>Ventas</Titulo>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Boton onClick={() => setMes(sumarMeses(mes, -1))} aria-label="Mes anterior">‹</Boton>
-        <span className="w-24 text-center text-sm font-medium">{mesLargo(mes)}</span>
-        <Boton onClick={() => setMes(sumarMeses(mes, 1))} aria-label="Mes siguiente">›</Boton>
+        <SelectorMes mes={mes} onCambio={setMes} />
         <Input placeholder="Buscar cliente, marca, servicio…" value={texto} onChange={(e) => setTexto(e.target.value)} className="min-w-0 flex-1 sm:max-w-xs" />
         <Select value={estado} onChange={(e) => setEstado(e.target.value)} aria-label="Estado">
           <option value="">Todos los estados</option>

@@ -3,13 +3,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ok, supabase } from '../lib/supabase'
 import { Boton, Campo, Input, MensajeError, Modal } from './ui'
 
-export type TablaAnulable = 'venta' | 'cuota' | 'comprobante' | 'pago'
+export type TablaAnulable = 'venta' | 'cuota' | 'comprobante' | 'pago' | 'planilla' | 'herramienta_gasto' | 'comision_pago'
 
 const EFECTO: Record<TablaAnulable, string> = {
   venta: 'La venta deja de contar en todos los cálculos.',
   cuota: 'La cuota sale del plan de pagos.',
   comprobante: 'Sus cuotas vuelven a quedar por facturar.',
   pago: 'El monto vuelve al saldo pendiente.',
+  planilla: 'Deja de contar en la planilla y en la rentabilidad del mes.',
+  herramienta_gasto: 'Deja de contar en los gastos y en la rentabilidad del mes.',
+  comision_pago: 'Deja de contar como comisión pagada y en la rentabilidad del mes.',
 }
 
 /** Anular cualquier registro con motivo; queda en la bitácora (R-81). */
