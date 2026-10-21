@@ -4,7 +4,7 @@ POSTGREST ?= postgrest
 export PGUSER ?= root
 export PGHOST ?= /var/run/postgresql
 
-.PHONY: db migrate-data test test-reglas test-doradas app api dev-users
+.PHONY: db migrate-data test test-reglas test-doradas app api dev-users publicar-app
 
 db:
 	dropdb --force --if-exists $(DB) && createdb $(DB)
@@ -32,3 +32,11 @@ api:
 
 app:
 	cd app && npm run dev
+
+# Producción: compila sin usuarios de prueba (VITE_DEV_AUTH=0 manda sobre .env.local) y publica en
+# Cloudflare Pages. Requiere SUPABASE_ACCESS_TOKEN, CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID.
+SUPABASE_REF ?= eiygcmpsbopcgfgnxwhr
+publicar-app:
+	cd app && VITE_DEV_AUTH=0 VITE_SUPABASE_URL=https://$(SUPABASE_REF).supabase.co \
+	  VITE_SUPABASE_ANON_KEY=$$(python3 ../db/supabase.py $(SUPABASE_REF) --anon) npm run build
+	npx --yes wrangler@3 pages deploy app/dist --project-name manya-erp --branch main --commit-dirty=true

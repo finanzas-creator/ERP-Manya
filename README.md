@@ -42,9 +42,8 @@ Postgres: todo se envía por la Management API con `db/supabase.py` y la variabl
    lotes (nunca `config`, `usuario`, `auditoria` ni `cierre_mensual`) con `restart identity`.
 4. **App:** https://manya-erp.pages.dev — proyecto Cloudflare Pages `manya-erp` (subida
    directa, sin Git). Compilar `app/` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (la
-   clave anon de Supabase), sin `VITE_DEV_AUTH`, y publicar con
-   `npx wrangler pages deploy app/dist --project-name manya-erp --branch main`
-   (usa `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`). En Supabase Auth, *Site URL* y la
+   clave anon de Supabase), sin `VITE_DEV_AUTH`, y publicar: `make publicar-app` hace ambas
+   cosas (usa `SUPABASE_ACCESS_TOKEN`, `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`). En Supabase Auth, *Site URL* y la
    lista de redirecciones apuntan a esa dirección.
 5. **Respaldos:** el plan Free no tiene respaldos diarios; pasar a Pro al usarlo a diario.
 
