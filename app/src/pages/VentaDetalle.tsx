@@ -28,20 +28,22 @@ export default function VentaDetalle() {
 
   const venta = useQuery({ queryKey: ['venta', id], queryFn: async () => ok(await supabase.from('v_venta').select('*').eq('id', id!).single()) })
   const cuotas = useQuery({ queryKey: ['cuotas', id], queryFn: async () => ok(await supabase.from('v_cuota').select('*').eq('venta_id', id!).order('orden')) })
-  const comprobantes = useQuery({
-    queryKey: ['comprobantes-venta', id],
-    enabled: !!cuotas.data,
-    queryFn: async () => {
-      const ids = [...new Set(cuotas.data!.map((c) => c.comprobante_id).filter(Boolean))] as string[]
-      return ids.length ? ok(await supabase.from('v_comprobante')
-        .select('id, serie_numero, tipo, empresa, cliente, fecha_emision, moneda, total, pct_detraccion, detraccion, pagado_detraccion, saldo, pagado_100, autodetraccion_fecha')
-        .in('id', ids).order('fecha_emision')) : []
-    },
+  // Los comprobantes del cliente se leen juntos y se muestran los que usan las cuotas de esta venta;
+  // así la lista se actualiza al emitir sin depender de que primero se recarguen las cuotas.
+  const comprobantesCliente = useQuery({
+    queryKey: ['comprobantes-cliente', venta.data?.cliente_id],
+    enabled: !!venta.data?.cliente_id,
+    queryFn: async () => ok(await supabase.from('v_comprobante')
+      .select('id, serie_numero, tipo, empresa, cliente, fecha_emision, moneda, total, pct_detraccion, detraccion, pagado_detraccion, saldo, pagado_100, autodetraccion_fecha')
+      .eq('cliente_id', venta.data!.cliente_id!).order('fecha_emision')),
   })
+  const idsComprobante = new Set((cuotas.data ?? []).map((c) => c.comprobante_id).filter(Boolean))
+  const comprobantes = { data: comprobantesCliente.data?.filter((c) => idsComprobante.has(c.id)) }
   const autodetracciones = useQuery({
-    queryKey: ['autodetraccion-venta', id], enabled: !!comprobantes.data?.length,
+    queryKey: ['autodetraccion-cliente', venta.data?.cliente_id],
+    enabled: !!venta.data?.cliente_id,
     queryFn: async () => ok(await supabase.from('v_autodetraccion').select('comprobante_id, estado, autodetraccion_constancia')
-      .in('comprobante_id', comprobantes.data!.map((c) => c.id!))),
+      .eq('cliente_id', venta.data!.cliente_id!)),
   })
   const pagos = useQuery({
     queryKey: ['pagos', id],
@@ -87,7 +89,7 @@ export default function VentaDetalle() {
           <div className="flex gap-2 border-t border-line px-4 py-3"><Estado valor={v.estado_plan} />{(v.cuotas ?? 0) > 0 && <Estado valor={v.estado_cobro} />}</div>
         </Card>
 
-        <div className="flex flex-col gap-4 lg:col-span-2">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
           <Card titulo="Plan de pagos" accion={(v.cuotas ?? 0) === 0
               ? <GenerarPlan ventaId={v.id!} />
               : <div className="flex items-center gap-3">
@@ -180,7 +182,7 @@ function CostosVenta({ ventaId, terceros, onAgregar, onAnular }:
   return (
     <Card titulo={terceros ? 'Consumo de pauta' : 'Costos y rentabilidad de la venta'} accion={<Boton onClick={onAgregar}>+ Costo</Boton>}>
       <div className="grid gap-4 md:grid-cols-5">
-        <div className="md:col-span-3">
+        <div className="min-w-0 md:col-span-3">
           <Tabla filas={costos.data} clave={(c) => c.id!} vacio={terceros ? 'Aún no se registra el consumo' : 'Sin costos de proveedor'} columnas={[
             { titulo: 'Fecha', celda: (c) => fecha(c.fecha) },
             { titulo: 'Tipo', celda: (c) => <><div>{TIPO_COSTO[c.tipo!]}</div>{c.descripcion && <div className="text-xs text-t3">{c.descripcion}</div>}</> },

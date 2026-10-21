@@ -79,6 +79,7 @@ export default function NuevaVenta() {
           </Campo>
           <Campo label="Modalidad" ayuda={servicio ? `Sugerida por el catálogo: ${servicio.modalidad}` : 'Elige primero el servicio'}>
             <Select value={modalidad ?? ''} onChange={set('modalidad')} disabled={!servicio}>
+              {!servicio && <option value="">—</option>}
               <option value="mensual">Mensual (se renueva cada ciclo)</option>
               <option value="proyecto">Proyecto (ingreso repartido hasta la entrega)</option>
             </Select>

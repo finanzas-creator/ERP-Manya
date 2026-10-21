@@ -737,6 +737,8 @@ def migrar(hojas):
         S.raw(f"select setval(pg_get_serial_sequence('{t}','id'), (select max(id) from {t}));")
     S.raw("select setval('venta_codigo_seq', (select count(*) from venta));")
     S.raw("commit;")
+    # Estadísticas al día: sin ellas el planificador elige mal justo después de la carga (8 s vs 0.1 s).
+    S.raw("analyze;")
     return S
 
 

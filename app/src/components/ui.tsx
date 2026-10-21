@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
+import { cloneElement, isValidElement, useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactElement, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { ESTADOS, type Tono } from '../lib/estados'
 import { mesLargo, sumarMeses } from '../lib/formato'
 import { Icono } from './iconos'
@@ -189,7 +189,23 @@ export function Boton({ variante = 'normal', className = '', ...p }:
   return <button {...p} className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${estilos} ${className}`} />
 }
 
+const CONTROLES: unknown[] = ['input', 'select', 'textarea']
+
+/** Campo de formulario. Si contiene un solo control, la etiqueta se enlaza a él por id: así un
+ *  lector de pantalla lo nombra solo con la etiqueta (sin leer las opciones de una lista). */
 export function Campo({ label, children, ayuda }: { label: string; children: ReactNode; ayuda?: ReactNode }) {
+  const id = useId()
+  const ayudaId = `${id}-ayuda`
+  if (isValidElement(children) && CONTROLES.includes(children.type)) {
+    const control = children as ReactElement<{ id?: string; 'aria-describedby'?: string }>
+    return (
+      <div className="flex flex-col gap-1 text-sm">
+        <label htmlFor={control.props.id ?? id} className="text-xs font-medium text-t2">{label}</label>
+        {cloneElement(control, { id: control.props.id ?? id, 'aria-describedby': ayuda ? ayudaId : undefined })}
+        {ayuda && <span id={ayudaId} className="text-xs text-t3">{ayuda}</span>}
+      </div>
+    )
+  }
   return (
     <label className="flex flex-col gap-1 text-sm">
       <span className="text-xs font-medium text-t2">{label}</span>
@@ -202,6 +218,7 @@ export function Campo({ label, children, ayuda }: { label: string; children: Rea
 const inputCls = 'rounded-lg border border-line bg-s1 px-2.5 py-1.5 text-sm outline-none focus:border-accent'
 export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input {...p} className={`${inputCls} ${p.className ?? ''}`} />
 export const Select = (p: SelectHTMLAttributes<HTMLSelectElement>) => <select {...p} className={`${inputCls} ${p.className ?? ''}`} />
+CONTROLES.push(Input, Select)
 
 export function Modal({ titulo, onCerrar, children }: { titulo: string; onCerrar: () => void; children: ReactNode }) {
   return (

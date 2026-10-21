@@ -24,7 +24,12 @@ export default function Ventas() {
   const filas = data?.filter((v) =>
     (!t || `${v.cliente} ${v.marca} ${v.servicio} ${v.codigo}`.toLowerCase().includes(t)) &&
     (!estado || v.estado_cobro === estado || v.estado_plan === estado))
-  const totalPropio = filas?.filter((v) => v.naturaleza === 'propio').reduce((s, v) => s + (v.monto_neto_usd ?? 0), 0) ?? 0
+  // R-04: la venta del mes es la misma del Resumen y de la pestaña Ventas del sheet (venta neta, sin terceros)
+  const kpi = useQuery({
+    queryKey: ['kpi_mes'],
+    queryFn: async () => ok(await supabase.from('v_kpi_mes').select('*').order('periodo')),
+  })
+  const ventasMes = kpi.data?.find((k) => k.periodo === mes)?.ventas_usd
 
   return (
     <>
@@ -41,7 +46,7 @@ export default function Ventas() {
           <option value="sin_plan">Sin plan de pagos</option>
         </Select>
       </div>
-      <Card titulo={<>{filas?.length ?? 0} ventas · <span className="num">{usd(totalPropio)}</span> <span className="font-normal text-t3">(sin terceros)</span></>}>
+      <Card titulo={<>{filas?.length ?? 0} ventas{!texto && !estado && <> · venta neta del mes <span className="num">{usd(ventasMes)}</span> <span className="font-normal text-t3">(sin terceros ni costo de proveedor)</span></>}</>}>
         <Tabla filas={filas} clave={(v) => v.id!} onFila={(v) => navigate(`/ventas/${v.id}`)} columnas={[
           { titulo: 'Fecha', celda: (v) => <span className="whitespace-nowrap">{fecha(v.fecha_contrato)}</span> },
           { titulo: 'Cliente', celda: (v) => <><div className="font-medium">{v.marca ?? v.cliente}</div><div className="text-xs text-t3">{v.cliente}</div></> },

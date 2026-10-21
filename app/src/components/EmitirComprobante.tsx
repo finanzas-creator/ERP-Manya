@@ -21,7 +21,7 @@ export function EmitirComprobante({ clienteId, preseleccion, onCerrar }:
   const cuotas = useQuery({
     queryKey: ['por-facturar', clienteId],
     queryFn: async () => ok(await supabase.from('v_cuota').select('id, orden, concepto, servicio, marca, monto_neto, total, moneda, fecha_contrato')
-      .eq('cliente_id', clienteId).is('comprobante_id', null).eq('pagada', false).order('fecha_contrato')),
+      .eq('cliente_id', clienteId).is('comprobante_id', null).eq('pagada', false).order('fecha_contrato').order('venta_id').order('orden')),
   })
 
   useEffect(() => {   // detracción sugerida por la regla R-22; editable
