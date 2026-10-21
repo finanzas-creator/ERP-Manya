@@ -57,6 +57,27 @@ def ventas_por_mes(hojas, db, R):
     R.check("Ventas por mes y categoría", "R-04", difs, len(oficial))
 
 
+def contratos(hojas, db, R):
+    """R-01/R-04: cada fila de la pestaña 'Contratos' existe en el sistema con el mismo monto
+    ('Costo neto (USD)') y, si es propia, la misma venta neta ('Monto Neto de Venta')."""
+    filas = [r for _, r in registros(hojas, "Contratos", 34) if txt(r[0]) and txt(r[1])]
+    sistema = {llave(k): (float(m), float(p), n) for k, m, p, n in query(db, """
+        select v.codigo_legacy, vb.monto_neto_usd, coalesce(p.proveedor_usd, 0), vb.naturaleza
+        from venta v join v_venta_base vb on vb.id = v.id
+        left join v_costo_proveedor_venta p on p.venta_id = v.id""")}
+    difs = []
+    for r in filas:
+        s = sistema.get(llave(r[0]))
+        costo, venta = num(r[13]), num(r[15])
+        if s is None:
+            difs.append((txt(r[0]), "no está en el sistema"))
+        elif costo is not None and abs(s[0] - costo) > TOL:
+            difs.append((txt(r[0]), "monto", costo, round(s[0], 2)))
+        elif venta is not None and s[2] == "propio" and abs(s[0] - s[1] - venta) > TOL:
+            difs.append((txt(r[0]), "venta neta", venta, round(s[0] - s[1], 2)))
+    R.check("Contratos: monto y venta neta de cada contrato", "R-01/R-04", difs, len(filas))
+
+
 def cobranza(hojas, db, R, exc):
     """R-33/R-34: líneas 'Por Cobrar' del Plan de facturación = cuotas pendientes con el mismo saldo."""
     plan = registros(hojas, "Plan de facturacion", 27)
@@ -147,6 +168,7 @@ def main():
     exc = excepciones(sys.argv[1])
     R = Resultado()
     ventas_por_mes(hojas, db, R)
+    contratos(hojas, db, R)
     cobranza(hojas, db, R, exc)
     cobranza_por_contrato(hojas, db, R, exc)
     renovaciones(hojas, db, R, exc)

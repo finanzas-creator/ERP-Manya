@@ -45,7 +45,7 @@ Postgres: todo se envía por la Management API con `db/supabase.py` y la variabl
    En Auth, la *Site URL* debe ser la dirección de la app: el correo de invitación lleva a la
    app, donde la persona crea su contraseña. "Olvidé mi contraseña" usa el mismo flujo.
    Para recargar desde cero, primero vaciar la carga: `truncate` de las tablas que llenan los
-   lotes (nunca `config`, `usuario`, `auditoria` ni `cierre_mensual`) con `restart identity`.
+   lotes, más `gestion_cobranza` que las referencia (nunca `config`, `usuario`, `auditoria`, `cierre_mensual` ni `tipo_cambio_sunat`), con `restart identity`.
 4. **App:** https://manya-erp.pages.dev — proyecto Cloudflare Pages `manya-erp` (subida
    directa, sin Git). Compilar `app/` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (la
    clave anon de Supabase), sin `VITE_DEV_AUTH`, y publicar: `make publicar-app` hace ambas
