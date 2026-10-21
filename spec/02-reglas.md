@@ -35,6 +35,8 @@ como *(config)* se cambian en Configuración, no en el código.
 - **R-34** Estado de una cuota: *por facturar* (sin comprobante) · *por cobrar* · *vencida* (hoy > vencimiento) · *pagada*.
 - **R-35** Un comprobante está pagado al 100% cuando todas sus cuotas están pagadas. Su **fecha de pago completo** es la del pago que lo completó.
 - **R-36** La autodetracción se registra en el comprobante (fecha); no cambia el saldo del cliente.
+- **R-37** Un cliente es **moroso** si tiene deuda con más de **60 días** *(config)* de atraso. El dashboard muestra los morosos con su última gestión de cobranza.
+- **R-38** Cada acción de cobranza (llamada, correo, acuerdo de pago…) se registra con fecha, detalle y, si lo hay, el compromiso de pago y el próximo paso. Estado de la gestión: *sin gestión* · *compromiso incumplido* (pasó la fecha prometida) · *seguimiento atrasado* (pasó la fecha del próximo paso) · *en gestión*.
 
 ## Comisiones
 - **R-40** El % de comisión del partner se guarda en la venta (por defecto, el del servicio contratado).

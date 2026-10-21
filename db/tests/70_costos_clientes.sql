@@ -65,3 +65,18 @@ begin
        = coalesce((select sum(saldo_usd) from v_cuota where not pagada and vencimiento < current_date), 0), 'proyección: vencido completo';
   assert (select coalesce(concentracion_top5, 0) between 0 and 1 from v_kpi_hoy_calc), 'concentración entre 0 y 1';
 end $$;
+
+-- R-37/R-38: morosos y estado de su gestión de cobranza
+do $$
+declare c uuid := '00000000-0000-0000-0000-0000000000c1'; g uuid;
+begin
+  assert (select moroso and estado_gestion = 'sin_gestion' from v_morosidad where cliente_id = c), 'R-37 moroso sin gestión';
+  insert into gestion_cobranza (cliente_id, fecha, tipo_id, detalle, compromiso_fecha)
+  values (c, current_date - 10, 1, 'Llamada a finanzas', current_date - 2) returning id into g;
+  assert (select estado_gestion from v_morosidad where cliente_id = c) = 'compromiso_incumplido', 'R-38 compromiso vencido';
+  insert into gestion_cobranza (cliente_id, fecha, tipo_id, detalle, proxima_fecha)
+  values (c, current_date, 2, 'Correo con estado de cuenta', current_date + 3);
+  assert (select estado_gestion from v_morosidad where cliente_id = c) = 'en_gestion', 'R-38 la última gestión manda';
+  perform anular('gestion_cobranza', (select id from gestion_cobranza where detalle like 'Correo%'), 'prueba');
+  assert (select estado_gestion from v_morosidad where cliente_id = c) = 'compromiso_incumplido', 'R-81 lo anulado no cuenta';
+end $$;

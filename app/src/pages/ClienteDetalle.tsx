@@ -5,6 +5,7 @@ import { ok, supabase } from '../lib/supabase'
 import { dinero, fecha, usd } from '../lib/formato'
 import { Boton, Campo, Card, Estado, Input, Kpi, MensajeError, Modal, Tabla, Titulo } from '../components/ui'
 import { Icono } from '../components/iconos'
+import { HistorialGestion } from '../components/GestionCobranza'
 
 /** Ficha del cliente: deuda, servicios y ventas, con edición de sus datos y marcas. */
 export default function ClienteDetalle() {
@@ -70,6 +71,8 @@ export default function ClienteDetalle() {
           ]} />
         </Card>
       </div>
+
+      {c && ((c.por_cobrar_usd ?? 0) > 0) && <div className="mt-4"><HistorialGestion clienteId={id!} cliente={c.razon_social ?? ''} /></div>}
 
       <Card titulo="Ventas" className="mt-4">
         <Tabla filas={ventas.data} clave={(v) => v.id!} onFila={(v) => navigate(`/ventas/${v.id}`)} vacio="Sin ventas" columnas={[

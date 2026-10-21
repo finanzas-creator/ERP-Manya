@@ -7,10 +7,11 @@ import { dinero, fecha, hoyISO, usd } from '../lib/formato'
 import { ESTADOS, TRAMOS } from '../lib/estados'
 import { Boton, Card, Estado, Input, Kpi, Nota, Tabla, Titulo } from '../components/ui'
 import { PagoModal } from '../components/Pago'
+import { GestionModal } from '../components/GestionCobranza'
 import type { Fila } from '../lib/db'
 
 type Linea = Fila<'v_cobranza'>
-type Comp = { comprobante_id: string; serie: string; cliente: string; vencimiento: string | null; tramo: string
+type Comp = { comprobante_id: string; serie: string; cliente: string; cliente_id: string; vencimiento: string | null; tramo: string
   dias: number; saldo: number; saldo_usd: number; moneda: string; venta_id: string }
 
 export default function Cobranza() {
@@ -18,6 +19,7 @@ export default function Cobranza() {
   const [texto, setTexto] = useState('')
   const [tramo, setTramo] = useState('')
   const [pagar, setPagar] = useState<Comp | null>(null)
+  const [gestion, setGestion] = useState<Comp | null>(null)
   const { data } = useQuery({
     queryKey: ['cobranza'],
     queryFn: async () => ok(await supabase.from('v_cobranza').select('*').order('vencimiento')),
@@ -27,7 +29,7 @@ export default function Cobranza() {
   const porComp = new Map<string, Comp>()
   for (const l of (data ?? []) as Linea[]) {
     const c = porComp.get(l.comprobante_id!) ?? { comprobante_id: l.comprobante_id!, serie: l.serie_numero ?? 'Comanda',
-      cliente: l.cliente!, vencimiento: l.vencimiento, tramo: l.tramo!, dias: l.dias_atraso ?? 0, saldo: 0, saldo_usd: 0,
+      cliente: l.cliente!, cliente_id: l.cliente_id!, vencimiento: l.vencimiento, tramo: l.tramo!, dias: l.dias_atraso ?? 0, saldo: 0, saldo_usd: 0,
       moneda: l.moneda!, venta_id: l.venta_id! }
     c.saldo += l.saldo ?? 0
     c.saldo_usd += l.saldo_usd ?? 0
@@ -62,9 +64,13 @@ export default function Cobranza() {
           { titulo: 'Atraso', derecha: true, celda: (c) => (c.dias ? `${c.dias} d` : '—') },
           { titulo: 'Saldo', derecha: true, celda: (c) => dinero(c.saldo, c.moneda) },
           { titulo: 'Antigüedad', celda: (c) => <Estado valor={c.tramo} /> },
-          { titulo: '', celda: (c) => <Boton onClick={(e) => { e.stopPropagation(); setPagar(c) }}>Pagar</Boton> },
+          { titulo: '', celda: (c) => <div className="flex justify-end gap-1">
+            {c.dias > 0 && <Boton variante="fantasma" onClick={(e) => { e.stopPropagation(); setGestion(c) }}>Gestión</Boton>}
+            <Boton onClick={(e) => { e.stopPropagation(); setPagar(c) }}>Pagar</Boton>
+          </div> },
         ]} />
       </Card>
+      {gestion && <GestionModal clienteId={gestion.cliente_id} cliente={gestion.cliente} onCerrar={() => setGestion(null)} />}
       {pagar && <PagoModal onCerrar={() => setPagar(null)} objetivo={{
         tipo: 'comprobante', id: pagar.comprobante_id, saldo: pagar.saldo, moneda: pagar.moneda,
         descripcion: `${pagar.serie} · ${pagar.cliente}` }} />}

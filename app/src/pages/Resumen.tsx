@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ok, supabase } from '../lib/supabase'
-import { mesActual, mesLargo, pct, sumarMeses, usd } from '../lib/formato'
+import { fecha, mesActual, mesLargo, pct, sumarMeses, usd } from '../lib/formato'
 import { puedeOperar, useRol } from '../lib/sesion'
-import { Barras, Card, Kpi, Nota, Panel, Renglon, Select, Tabla, Titulo } from '../components/ui'
+import { Barras, Card, Estado, Kpi, Nota, Panel, Renglon, Select, Tabla, Titulo } from '../components/ui'
 import type { Fila } from '../lib/db'
 
 type Mes = Fila<'v_kpi_mes'>
@@ -86,6 +86,8 @@ export default function Resumen() {
         <Nota>Días promedio de cobro (DSO): {k?.dso_dias ?? '—'} · Los 5 mayores clientes son el {pct(k?.concentracion_top5)} de la venta de los últimos 12 meses · Renovaciones: {k?.renovaciones_30d ?? 0} en los próximos 30 días y {k?.renovaciones_vencidas ?? 0} vencidas sin renovar.</Nota>
       </Card>
 
+      <Morosos onCliente={opera ? (id) => navigate(`/clientes/${id}`) : undefined} />
+
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card titulo="Ingresos vs costos · últimos 12 meses" className="lg:col-span-2">
           <div className="h-72 p-3">
@@ -164,6 +166,33 @@ export default function Resumen() {
       {detalle && <DetalleKpi tipo={detalle} periodo={periodo} m={m} g={g} ventasCategoria={ventasCategoria}
         onCerrar={() => setDetalle(null)} onIr={opera ? (a) => navigate(a) : undefined} />}
     </>
+  )
+}
+
+/** R-37/R-38: clientes con deuda de más de 60 días y qué se está haciendo para cobrarles. */
+function Morosos({ onCliente }: { onCliente?: (id: string) => void }) {
+  const { data } = useQuery({
+    queryKey: ['kpi_morosidad'],
+    queryFn: async () => ok(await supabase.from('v_kpi_morosidad').select('*').eq('moroso', true).order('moroso_usd', { ascending: false })),
+  })
+  return (
+    <Card titulo={`Clientes morosos · más de 60 días${data ? ` · ${data.length}` : ''}`} className="mt-4">
+      <Tabla filas={data} clave={(m) => m.cliente_id!} onFila={onCliente ? (m) => onCliente(m.cliente_id!) : undefined}
+        vacio="Ningún cliente con deuda de más de 60 días" columnas={[
+          { titulo: 'Cliente', celda: (m) => <><div className="font-medium">{m.cliente}</div><div className="text-xs text-t3">{m.comprobantes_vencidos} comprobantes vencidos · {m.dias_atraso} días</div></> },
+          { titulo: 'Más de 60 días', derecha: true, celda: (m) => <span className="text-critical">{usd(m.moroso_usd)}</span> },
+          { titulo: 'Total vencido', derecha: true, celda: (m) => usd(m.vencido_usd) },
+          { titulo: 'Última gestión', celda: (m) => m.ultima_gestion
+            ? <><div>{fecha(m.ultima_gestion)} · {m.ultima_tipo}</div><div className="max-w-xs truncate text-xs text-t3">{m.ultima_detalle}</div></>
+            : <span className="text-t3">—</span> },
+          { titulo: 'Plan de acción', celda: (m) => m.compromiso_fecha || m.proximo_paso
+            ? <div className="text-xs">{m.compromiso_fecha && <div>Prometió pagar {m.compromiso_monto ? usd(m.compromiso_monto) + ' ' : ''}el {fecha(m.compromiso_fecha)}</div>}
+                {m.proximo_paso && <div className="text-t2">{m.proximo_paso}{m.proxima_fecha ? ` · ${fecha(m.proxima_fecha)}` : ''}</div>}</div>
+            : <span className="text-t3">—</span> },
+          { titulo: 'Estado', celda: (m) => <Estado valor={m.estado_gestion} /> },
+        ]} />
+      <Nota>La gestión se registra desde Cobranza (botón Gestión) o desde la ficha del cliente.</Nota>
+    </Card>
   )
 }
 
