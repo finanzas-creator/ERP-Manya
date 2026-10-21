@@ -45,5 +45,5 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ⬜ Integración SUNAT API SIRE (RVIE): importar comprobantes emitidos de ambas empresas
 - ⬜ Reclasificación del catálogo a la taxonomía BD_MAD
 - ⬜ Control de pauta con consumo real (ManyaPulse)
-- ⬜ Control de pauta: hoy incluye influencers (terceros sin consumo registrado); decidir si se excluyen
+- ⬜ Registrar el costo real de influencers y otros costos directos desde la interfaz (el sheet no lo tiene; se mantienen en el control de pauta)
 - ⬜ Alertas (vencimientos, renovaciones)

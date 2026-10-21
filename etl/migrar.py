@@ -557,7 +557,7 @@ def migrar(hojas):
         return s
 
     lineas_por_comp = collections.defaultdict(list)
-    cuotas_validas, cuota_por_codigo = [], {}
+    cuotas_validas = []
     for n, r in plan:
         if not txt(r[1]):
             continue
@@ -565,16 +565,6 @@ def migrar(hojas):
         if not vid:
             A.add("línea de facturación sin contrato", "Plan de facturacion", n, r[0], "línea omitida")
             continue
-        if llave(r[0]) in cuota_por_codigo:  # D-18: mismo código = misma cuota; se suman neto e IGV
-            primera, vid_primera = cuota_por_codigo[llave(r[0])]
-            iguales = vid == vid_primera and primera[2] == r[2] and primera[6:11] == r[6:11]
-            A.add("línea repetida" if iguales else "línea repetida con datos distintos",
-                  "Plan de facturacion", n, r[0], "se suma a la primera" + ("" if iguales else "; revisar"))
-            for i in (3, 4):
-                primera[i] = (num(primera[i]) or 0.0) + (num(r[i]) or 0.0)
-            continue
-        r = list(r)
-        cuota_por_codigo[llave(r[0])] = (r, vid)
         cuotas_validas.append((n, r, vid))
         nro = txt(r[8])
         tipo = TIPOS.get(clave(r[7]))
@@ -628,13 +618,18 @@ def migrar(hojas):
     S.copy("comprobante", ["id", "empresa_id", "tipo", "serie_numero", "fecha_emision", "fecha_limite",
                            "pct_detraccion", "autodetraccion_fecha"], filas_comp)
 
-    filas_cuota, cuota_de_linea = [], {}
+    filas_cuota, cuota_de_linea = [], collections.defaultdict(list)
     orden = collections.Counter()
     cuotas_validas.sort(key=lambda x: (x[2], fecha(x[1][6]) or dt.date.max, x[0]))
     for n, r, vid in cuotas_validas:
         orden[vid] += 1
-        qid = uid("cuota", r[0])
-        cuota_de_linea[llave(r[0])] = qid
+        # D-18: líneas con el mismo código son cuotas distintas (p. ej. pauta y creadores de contenido
+        # en una factura); la segunda y siguientes llevan su número de ocurrencia en el id.
+        previas = cuota_de_linea[llave(r[0])]
+        qid = uid("cuota", r[0], *([len(previas) + 1] if previas else []))
+        if previas:
+            A.add("línea con código repetido", "Plan de facturacion", n, r[0],
+                  "cuota separada; sus pagos se reparten en proporción (R-32)")
         monto = num(r[3])
         if monto is None:
             A.add("monto de cuota no numérico", "Plan de facturacion", n, r[0], "monto 0")
@@ -646,6 +641,7 @@ def migrar(hojas):
         if igv_sheet is not None and abs(monto * venta_info[vid]["pct_igv"] - igv_sheet) > 0.05:
             A.add("IGV de la cuota no coincide con % de la venta", "Plan de facturacion", n,
                   f"{r[0]}: {igv_sheet}", "se usa % de la venta")
+        previas.append((qid, monto))
         filas_cuota.append((qid, vid, orden[vid], txt(r[2]) or "Cuota", monto,
                             fecha(r[9]).isoformat() if fecha(r[9]) else None, comp_de_linea.get(llave(r[0])), r[0]))
     S.copy("cuota", ["id", "venta_id", "orden", "concepto", "monto_neto", "fecha_limite", "comprobante_id",
@@ -654,8 +650,8 @@ def migrar(hojas):
     # --- pagos
     filas_pago = []
     for n, r in pagos:
-        qid = cuota_de_linea.get(llave(r[0]))
-        if not qid:
+        cuotas = cuota_de_linea.get(llave(r[0]))
+        if not cuotas:
             A.add("pago sin línea de facturación", "Pagos de facturas", n, r[0], "pago omitido")
             continue
         f, monto, tc, musd, b = fecha(r[1]), num(r[2]), num(r[3]), num(r[4]), txt(r[5])
@@ -672,7 +668,11 @@ def migrar(hojas):
             A.add("pago en cuenta en soles con TC inválido", "Pagos de facturas", n, f"{monto} / {tc}",
                   "se usa el TC del mes")
             tc = None
-        filas_pago.append((uid("pago", n), qid, f.isoformat(), cta_id[clave(b)], monto, tc))
+        neto = sum(m for _, m in cuotas)
+        for i, (qid, m) in enumerate(cuotas):  # R-32: un pago del código se reparte entre sus cuotas
+            parte = monto * m / neto if neto else monto / len(cuotas)
+            filas_pago.append((uid("pago", n, *([i] if i else [])), qid, f.isoformat(), cta_id[clave(b)],
+                               parte, tc))
     S.copy("pago", ["id", "cuota_id", "fecha", "cuenta_id", "monto", "tc"],
            [p for p in filas_pago if p[5] is not None])
     sin_tc = [p for p in filas_pago if p[5] is None]
