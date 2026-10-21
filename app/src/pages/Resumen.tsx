@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ok, supabase } from '../lib/supabase'
-import { fecha, mesActual, mesLargo, pct, sumarMeses, usd } from '../lib/formato'
+import { dinero, fecha, mesActual, mesLargo, pct, sumarMeses, usd } from '../lib/formato'
 import { puedeOperar, useRol } from '../lib/sesion'
 import { Barras, Card, Estado, Kpi, Nota, Panel, Renglon, Select, Tabla, Titulo } from '../components/ui'
 import type { Fila } from '../lib/db'
@@ -58,6 +58,13 @@ export default function Resumen() {
         </Select>
       }>Resumen</Titulo>
 
+      {(k?.autodetracciones_pendientes ?? 0) > 0 && (
+        <div onClick={opera ? () => navigate('/cobranza') : undefined}
+          className={`mb-4 rounded-xl border border-critical/30 bg-critical-bg px-4 py-3 text-sm text-critical ${opera ? 'cursor-pointer' : ''}`}>
+          <b>{k!.autodetracciones_pendientes} autodetracciones pendientes</b> por {dinero(k!.autodetraccion_pendiente_pen, 'PEN')}:
+          clientes que pagaron la factura completa sin depositar la detracción. Se cierran al subir la constancia de pago{opera ? ' (en Cobranza)' : ''}.
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi label={`Ventas · ${mesLargo(periodo)}`} valor={usd(m?.ventas_usd)} onClick={() => setDetalle('ventas')}
           detalle={variacion(m?.ventas_usd, anterior?.ventas_usd) ?? 'por fecha de contrato'} />

@@ -110,6 +110,8 @@ const PARAMETROS = [
   { clave: 'detraccion_umbral_pen', label: 'Detracción desde (S/)', unidad: 'S/', regla: 'R-22' },
   { clave: 'tolerancia_usd', label: 'Tolerancia de pago (USD)', unidad: 'USD', regla: 'R-33' },
   { clave: 'tolerancia_pct', label: 'Tolerancia de pago (% del total)', unidad: '%', regla: 'R-33' },
+  { clave: 'morosidad_dias', label: 'Moroso desde (días de atraso)', unidad: 'días', regla: 'R-37' },
+  { clave: 'autodetraccion_desde', label: 'Autodetracción: revisar facturas desde', unidad: 'fecha', regla: 'R-36' },
 ] as const
 
 function Parametros() {
@@ -118,11 +120,12 @@ function Parametros() {
   const [f, setF] = useState<Record<string, string> | null>(null)
   const valores = f ?? Object.fromEntries(PARAMETROS.map((p) => {
     const v = cfg.data?.[p.clave]
-    return [p.clave, v == null ? '' : String(p.unidad === '%' ? +(v * 100).toFixed(4) : v)]
+    return [p.clave, v == null ? '' : String(p.unidad === '%' ? +(Number(v) * 100).toFixed(4) : v)]
   }))
   const guardar = useMutation({
     mutationFn: async () => {
-      const datos = Object.fromEntries(PARAMETROS.map((p) => [p.clave, Number(valores[p.clave]) / (p.unidad === '%' ? 100 : 1)]))
+      const datos = Object.fromEntries(PARAMETROS.map((p) => [p.clave,
+        p.unidad === 'fecha' ? valores[p.clave] : Number(valores[p.clave]) / (p.unidad === '%' ? 100 : 1)]))
       ok(await supabase.from('config').update(datos).eq('id', true))
     },
     onSuccess: () => { qc.invalidateQueries(); setF(null) },
@@ -132,7 +135,7 @@ function Parametros() {
       <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
         {PARAMETROS.map((p) => (
           <Campo key={p.clave} label={`${p.label} · ${p.regla}`}>
-            <Input type="number" step="0.01" value={valores[p.clave]} onChange={(e) => setF({ ...valores, [p.clave]: e.target.value })} />
+            <Input type={p.unidad === 'fecha' ? 'date' : 'number'} step="0.01" value={valores[p.clave]} onChange={(e) => setF({ ...valores, [p.clave]: e.target.value })} />
           </Campo>
         ))}
       </div>

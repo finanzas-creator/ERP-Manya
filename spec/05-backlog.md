@@ -29,7 +29,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Registrar pago de cuota / de comprobante completo (R-32)
 - ✅ Cobranza: cartera por antigüedad
 - ✅ Gestión de cobranza: morosos (+60 días) en el dashboard con su plan de acción; registro de llamadas, acuerdos y próximos pasos (R-37, R-38)
-- ✅ Autodetracción desde el comprobante de la venta (R-36) · ⬜ confirmar si una autodetracción deja la cuota como pagada (hoy no cambia el saldo)
+- ✅ Autodetracción (R-36): alerta cuando el cliente paga el total sin detracción, hasta subir la constancia · ⬜ revisar las 681 de 2021–2025 que el sheet marca sin detracción ingresada
 - ✅ Revisión de datos: lista de ventas con plan descuadrado (426 al migrar)
 - ✅ Anular pagos registrados por error
 

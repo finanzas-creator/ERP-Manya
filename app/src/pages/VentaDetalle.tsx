@@ -9,6 +9,7 @@ import { PagoModal } from '../components/Pago'
 import { EmitirComprobante } from '../components/EmitirComprobante'
 import { AnularModal, type TablaAnulable } from '../components/Anular'
 import { CuotaModal } from '../components/CuotaModal'
+import { AutodetraccionModal, verConstancia } from '../components/Autodetraccion'
 import type { Fila } from '../lib/db'
 
 type Cuota = Fila<'v_cuota'>
@@ -23,7 +24,7 @@ export default function VentaDetalle() {
   const [anular, setAnular] = useState<Anulacion | null>(null)
   const [editar, setEditar] = useState<Cuota | 'nueva' | null>(null)
   const [nuevoCosto, setNuevoCosto] = useState(false)
-  const [autodetraccion, setAutodetraccion] = useState<string | null>(null)
+  const [autodetraccion, setAutodetraccion] = useState<{ id: string; descripcion: string } | null>(null)
 
   const venta = useQuery({ queryKey: ['venta', id], queryFn: async () => ok(await supabase.from('v_venta').select('*').eq('id', id!).single()) })
   const cuotas = useQuery({ queryKey: ['cuotas', id], queryFn: async () => ok(await supabase.from('v_cuota').select('*').eq('venta_id', id!).order('orden')) })
@@ -33,9 +34,14 @@ export default function VentaDetalle() {
     queryFn: async () => {
       const ids = [...new Set(cuotas.data!.map((c) => c.comprobante_id).filter(Boolean))] as string[]
       return ids.length ? ok(await supabase.from('v_comprobante')
-        .select('id, serie_numero, tipo, empresa, fecha_emision, moneda, total, pct_detraccion, detraccion, pagado_detraccion, saldo, pagado_100, autodetraccion_fecha')
+        .select('id, serie_numero, tipo, empresa, cliente, fecha_emision, moneda, total, pct_detraccion, detraccion, pagado_detraccion, saldo, pagado_100, autodetraccion_fecha')
         .in('id', ids).order('fecha_emision')) : []
     },
+  })
+  const autodetracciones = useQuery({
+    queryKey: ['autodetraccion-venta', id], enabled: !!comprobantes.data?.length,
+    queryFn: async () => ok(await supabase.from('v_autodetraccion').select('comprobante_id, estado, autodetraccion_constancia')
+      .in('comprobante_id', comprobantes.data!.map((c) => c.id!))),
   })
   const pagos = useQuery({
     queryKey: ['pagos', id],
@@ -115,8 +121,10 @@ export default function VentaDetalle() {
                 : <span className="text-t3">—</span> },
               { titulo: 'Saldo', derecha: true, celda: (c) => dinero(c.saldo, c.moneda) },
               { titulo: '', celda: (c) => <div className="flex justify-end gap-1">
-                {(c.detraccion ?? 0) > (c.pagado_detraccion ?? 0) + 0.01 && !c.autodetraccion_fecha &&
-                  <Boton variante="fantasma" onClick={() => setAutodetraccion(c.id!)}>Autodetracción</Boton>}
+                {c.pagado_100 && (c.detraccion ?? 0) > (c.pagado_detraccion ?? 0) + 0.01 && !autodetracciones.data?.some((a) => a.comprobante_id === c.id && a.estado === 'conforme') &&
+                  <Boton variante="fantasma" onClick={() => setAutodetraccion({ id: c.id!, descripcion: `${c.serie_numero} · ${c.cliente}` })}>Autodetracción</Boton>}
+                {autodetracciones.data?.find((a) => a.comprobante_id === c.id)?.autodetraccion_constancia &&
+                  <Boton variante="fantasma" onClick={() => verConstancia(autodetracciones.data!.find((a) => a.comprobante_id === c.id)!.autodetraccion_constancia!)}>Constancia</Boton>}
                 <Boton variante="fantasma" onClick={() => setAnular({ tabla: 'comprobante', id: c.id!, titulo: `Anular ${c.serie_numero ?? 'comanda'}` })}>Anular</Boton>
               </div> },
             ]} />
@@ -144,7 +152,7 @@ export default function VentaDetalle() {
       {editar && <CuotaModal ventaId={v.id!} cuota={editar === 'nueva' ? null : editar} faltaPlanificar={v.falta_planificar ?? 0}
         moneda={v.moneda ?? 'USD'} onCerrar={() => setEditar(null)}
         onAnular={(c) => { setEditar(null); setAnular({ tabla: 'cuota', id: c.id!, titulo: `Anular cuota ${c.orden}` }) }} />}
-      {autodetraccion && <AutodetraccionModal comprobanteId={autodetraccion} onCerrar={() => setAutodetraccion(null)} />}
+      {autodetraccion && <AutodetraccionModal comprobanteId={autodetraccion.id} descripcion={autodetraccion.descripcion} onCerrar={() => setAutodetraccion(null)} />}
       {nuevoCosto && <CostoModal ventaId={v.id!} terceros={v.naturaleza === 'terceros'} moneda={v.moneda ?? 'USD'} onCerrar={() => setNuevoCosto(false)} />}
       {anular && <AnularModal {...anular} onCerrar={() => setAnular(null)} />}
     </>
@@ -226,27 +234,6 @@ function CostoModal({ ventaId, terceros, moneda, onCerrar }: { ventaId: string; 
         <Campo label="Monto"><Input type="number" step="0.01" value={f.monto} onChange={set('monto')} autoFocus /></Campo>
         <div className="sm:col-span-2"><Campo label="Detalle"><Input value={f.descripcion} onChange={set('descripcion')} placeholder="Ej.: influencer @cuenta, Meta Ads" /></Campo></div>
       </div>
-      <div className="mt-3"><MensajeError error={guardar.error} /></div>
-      <div className="mt-4 flex justify-end gap-2">
-        <Boton onClick={onCerrar}>Cancelar</Boton>
-        <Boton variante="primario" disabled={guardar.isPending} onClick={() => guardar.mutate()}>Guardar</Boton>
-      </div>
-    </Modal>
-  )
-}
-
-/** R-36: la empresa pagó ella misma la detracción; se registra la fecha y no cambia el saldo del cliente. */
-function AutodetraccionModal({ comprobanteId, onCerrar }: { comprobanteId: string; onCerrar: () => void }) {
-  const qc = useQueryClient()
-  const [dia, setDia] = useState(hoyISO())
-  const guardar = useMutation({
-    mutationFn: async () => ok(await supabase.from('comprobante').update({ autodetraccion_fecha: dia }).eq('id', comprobanteId)),
-    onSuccess: () => { qc.invalidateQueries(); onCerrar() },
-  })
-  return (
-    <Modal titulo="Registrar autodetracción" onCerrar={onCerrar}>
-      <p className="mb-3 text-sm text-t2">Úsalo cuando la agencia depositó la detracción porque el cliente no lo hizo. Queda registrada la fecha; el saldo del cliente no cambia (R-36).</p>
-      <Campo label="Fecha del depósito"><Input type="date" value={dia} onChange={(e) => setDia(e.target.value)} /></Campo>
       <div className="mt-3"><MensajeError error={guardar.error} /></div>
       <div className="mt-4 flex justify-end gap-2">
         <Boton onClick={onCerrar}>Cancelar</Boton>

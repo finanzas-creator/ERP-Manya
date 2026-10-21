@@ -8,6 +8,7 @@ import { ESTADOS, TRAMOS } from '../lib/estados'
 import { Boton, Card, Estado, Input, Kpi, Nota, Tabla, Titulo } from '../components/ui'
 import { PagoModal } from '../components/Pago'
 import { GestionModal } from '../components/GestionCobranza'
+import { AutodetraccionesPendientes } from '../components/Autodetraccion'
 import type { Fila } from '../lib/db'
 
 type Linea = Fila<'v_cobranza'>
@@ -52,6 +53,7 @@ export default function Cobranza() {
           </button>
         ))}
       </div>
+      <AutodetraccionesPendientes />
       <ProyeccionCobros />
       <div className="my-3 flex gap-2">
         <Input placeholder="Buscar cliente o comprobante…" value={texto} onChange={(e) => setTexto(e.target.value)} className="w-full sm:max-w-xs" />

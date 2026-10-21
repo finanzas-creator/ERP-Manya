@@ -34,7 +34,7 @@ como *(config)* se cambian en Configuración, no en el código.
 - **R-33** Saldo de una cuota = total (neto + IGV) − pagos. Se considera pagada si el saldo es ≤ **5 USD** *(config)* y además ≤ **2.5% del total** *(config)*: absorbe diferencias de cambio y redondeo, pero nunca una detracción pendiente (12%).
 - **R-34** Estado de una cuota: *por facturar* (sin comprobante) · *por cobrar* · *vencida* (hoy > vencimiento) · *pagada*.
 - **R-35** Un comprobante está pagado al 100% cuando todas sus cuotas están pagadas. Su **fecha de pago completo** es la del pago que lo completó.
-- **R-36** La autodetracción se registra en el comprobante (fecha); no cambia el saldo del cliente.
+- **R-36** Si el cliente paga al banco el total de una factura con detracción (sin depositar la detracción), la agencia debe **autodetraerse**: depositar ella la detracción, en soles redondeados al sol. Queda como alerta pendiente hasta registrar el depósito con su **constancia de pago**. No cambia el saldo del cliente (ya pagó todo). Se exige para facturas emitidas desde una fecha *(config)*.
 - **R-37** Un cliente es **moroso** si tiene deuda con más de **60 días** *(config)* de atraso. El dashboard muestra los morosos con su última gestión de cobranza.
 - **R-38** Cada acción de cobranza (llamada, correo, acuerdo de pago…) se registra con fecha, detalle y, si lo hay, el compromiso de pago y el próximo paso. Estado de la gestión: *sin gestión* · *compromiso incumplido* (pasó la fecha prometida) · *seguimiento atrasado* (pasó la fecha del próximo paso) · *en gestión*.
 

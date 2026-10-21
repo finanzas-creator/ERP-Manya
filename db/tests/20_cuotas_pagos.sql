@@ -57,3 +57,17 @@ begin
 exception when others then
   assert sqlerrm like 'R-21%', sqlerrm;
 end $$;
+
+-- R-36: si el cliente paga la factura completa al banco, la agencia debe autodetraer;
+-- queda pendiente hasta registrar la constancia
+do $$
+declare cid uuid := '00000000-0000-0000-0000-0000000000f1';
+begin
+  insert into pago (cuota_id, fecha, cuenta_id, monto, tc)
+  values ('00000000-0000-0000-0000-0000000000b1', '2026-02-01', 1, 1180, 1);
+  assert (select estado from v_autodetraccion where comprobante_id = cid) = 'pendiente', 'R-36 obligación de autodetraer';
+  assert (select detraccion_pen from v_autodetraccion where comprobante_id = cid) = round(141.6 * 3.75), 'R-36 detracción en soles';
+  assert (select autodetracciones_pendientes from v_kpi_hoy_calc) >= 1, 'R-36 alerta en el dashboard';
+  update comprobante set autodetraccion_fecha = '2026-02-05', autodetraccion_constancia = 'autodetraccion/x.pdf' where id = cid;
+  assert (select estado from v_autodetraccion where comprobante_id = cid) = 'conforme', 'R-36 conforme con constancia';
+end $$;
