@@ -5,10 +5,11 @@ import { ROLES } from '../lib/estados'
 import { Boton, Campo, Input, MensajeError } from '../components/ui'
 
 export default function Login() {
-  const { entrar, entrarDev } = useSesion()
+  const { entrar, entrarDev, recuperarClave } = useSesion()
   const [email, setEmail] = useState('')
   const [clave, setClave] = useState('')
   const [error, setError] = useState<unknown>(null)
+  const [enviado, setEnviado] = useState(false)
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
@@ -27,6 +28,11 @@ export default function Login() {
             <Campo label="Correo"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Campo>
             <Campo label="Contraseña"><Input type="password" value={clave} onChange={(e) => setClave(e.target.value)} required /></Campo>
             <Boton variante="primario" type="submit">Entrar</Boton>
+            <Boton variante="fantasma" type="button" disabled={!email}
+              onClick={() => recuperarClave(email).then(() => setEnviado(true)).catch(setError)}>
+              Olvidé mi contraseña
+            </Boton>
+            {enviado && <p className="text-xs text-t2">Te enviamos un correo para crear una nueva contraseña.</p>}
           </form>
         )}
         <div className="mt-3"><MensajeError error={error} /></div>

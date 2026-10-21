@@ -5,10 +5,17 @@ import type { Fila } from './db'
 
 type Usuario = Fila<'usuario'>
 
+// Quien llega desde el correo de invitación o de recuperación aún no tiene contraseña:
+// se lee antes de que supabase-js limpie el enlace.
+const LLEGA_POR_ENLACE = /type=(invite|recovery)/.test(window.location.hash)
+
 type Sesion = {
   usuario: Usuario | null | undefined   // undefined = cargando, null = sin sesión
   entrarDev: (rol: string) => Promise<void>
   entrar: (email: string, clave: string) => Promise<void>
+  debeCrearClave: boolean
+  crearClave: (clave: string) => Promise<void>
+  recuperarClave: (email: string) => Promise<void>
   salir: () => Promise<void>
 }
 
@@ -17,11 +24,15 @@ const Ctx = createContext<Sesion | null>(null)
 export function SesionProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient()
   const [autenticado, setAutenticado] = useState<boolean>(DEV_AUTH ? hayTokenDev() : false)
+  const [debeCrearClave, setDebeCrearClave] = useState(!DEV_AUTH && LLEGA_POR_ENLACE)
 
   useEffect(() => {
     if (DEV_AUTH) return
     supabase.auth.getSession().then(({ data }) => setAutenticado(!!data.session))
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setAutenticado(!!s))
+    const { data } = supabase.auth.onAuthStateChange((e, s) => {
+      setAutenticado(!!s)
+      if (e === 'PASSWORD_RECOVERY') setDebeCrearClave(true)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -41,6 +52,16 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     },
     entrar: async (email, clave) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password: clave })
+      if (error) throw new Error(error.message)
+    },
+    debeCrearClave,
+    crearClave: async (clave) => {
+      const { error } = await supabase.auth.updateUser({ password: clave })
+      if (error) throw new Error(error.message)
+      setDebeCrearClave(false)
+    },
+    recuperarClave: async (email) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })
       if (error) throw new Error(error.message)
     },
     salir: async () => {

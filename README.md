@@ -36,6 +36,8 @@ Postgres: todo se envía por la Management API con `db/supabase.py` y la variabl
    Antes, `make test` en local debe pasar; luego se comparan conteos y totales de
    `v_ventas_mes`, `v_kpi_hoy_calc` y `v_gp_agencia_mes` entre local y Supabase.
 3. **Usuarios:** invitarlos en Auth y registrar su fila en `usuario` con el mismo id y su rol.
+   En Auth, la *Site URL* debe ser la dirección de la app: el correo de invitación lleva a la
+   app, donde la persona crea su contraseña. "Olvidé mi contraseña" usa el mismo flujo.
 4. **App:** Cloudflare Pages, publicando `app/` con `VITE_SUPABASE_URL` y
    `VITE_SUPABASE_ANON_KEY`, sin `VITE_DEV_AUTH`.
 5. **Respaldos:** el plan Free no tiene respaldos diarios; pasar a Pro al usarlo a diario.

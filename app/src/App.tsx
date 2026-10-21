@@ -5,6 +5,7 @@ import { DEV_AUTH } from './lib/supabase'
 import { ROLES } from './lib/estados'
 import { Boton } from './components/ui'
 import Login from './pages/Login'
+import CrearClave from './pages/CrearClave'
 import Resumen from './pages/Resumen'
 import Ventas from './pages/Ventas'
 import VentaDetalle from './pages/VentaDetalle'
@@ -24,10 +25,11 @@ const NAV = [
 ]
 
 export default function App() {
-  const { usuario, salir } = useSesion()
+  const { usuario, salir, debeCrearClave } = useSesion()
   const [menu, setMenu] = useState(false)
   if (usuario === undefined) return <div className="p-8 text-t3">Cargando…</div>
   if (usuario === null) return <Login />
+  if (debeCrearClave) return <CrearClave />
   const opera = puedeOperar(usuario.rol)
 
   return (
