@@ -63,7 +63,7 @@ function TipoCambio() {
               {t.periodo < mesActual() && <button className="text-xs text-accent hover:underline" onClick={() => setCerrar(t.periodo)}>Cerrar mes</button>}
             </span> },
       ]} />
-      <Nota>Con este TC se convierten a USD las ventas y los costos en soles del mes (R-06, R-60). Desde noviembre 2026 se toma solo cada día el TC de venta SUNAT (8 y 13 h); hasta octubre se conserva el del sheet, ya conciliado. Si lo corriges a mano, queda como manual y no se sobrescribe. Cerrar un mes bloquea sus registros y fija su TC (R-70).</Nota>
+      <Nota>Con este TC se convierten a USD las ventas y los costos en soles del mes (R-06, R-60). Desde noviembre 2026 se toma solo cada día el TC de venta SUNAT (7:00 de Lima, con un reintento a las 10:00); hasta octubre se conserva el del sheet, ya conciliado. Si lo corriges a mano, queda como manual y no se sobrescribe. Cerrar un mes bloquea sus registros y fija su TC (R-70).</Nota>
       {editar && <EditarTc periodo={editar} actual={tc.data?.find((t) => t.periodo === editar)?.tc} onCerrar={() => setEditar(null)} />}
       {cerrar && (
         <Modal titulo={`Cerrar ${mesLargo(cerrar)}`} onCerrar={() => setCerrar(null)}>
