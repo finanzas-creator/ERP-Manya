@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ok, supabase } from '../lib/supabase'
-import { dinero, fecha, usd } from '../lib/formato'
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { dinero, fecha, hoyISO, usd } from '../lib/formato'
 import { ESTADOS, TRAMOS } from '../lib/estados'
-import { Boton, Card, Estado, Input, Kpi, Tabla, Titulo } from '../components/ui'
+import { Boton, Card, Estado, Input, Kpi, Nota, Tabla, Titulo } from '../components/ui'
 import { PagoModal } from '../components/Pago'
 import type { Fila } from '../lib/db'
 
@@ -49,6 +50,7 @@ export default function Cobranza() {
           </button>
         ))}
       </div>
+      <ProyeccionCobros />
       <div className="my-3 flex gap-2">
         <Input placeholder="Buscar cliente o comprobante…" value={texto} onChange={(e) => setTexto(e.target.value)} className="w-full sm:max-w-xs" />
       </div>
@@ -67,5 +69,41 @@ export default function Cobranza() {
         tipo: 'comprobante', id: pagar.comprobante_id, saldo: pagar.saldo, moneda: pagar.moneda,
         descripcion: `${pagar.serie} · ${pagar.cliente}` }} />}
     </>
+  )
+}
+
+/** Cobros esperados en las próximas 13 semanas, según el vencimiento de cada cuota (R-23). */
+function ProyeccionCobros() {
+  const { data } = useQuery({
+    queryKey: ['proyeccion_cobros'],
+    queryFn: async () => ok(await supabase.from('v_proyeccion_cobros').select('*').order('semana')),
+  })
+  const porSemana = new Map((data ?? []).map((d) => [d.semana!, d]))
+  const hoy = new Date(hoyISO() + 'T00:00:00Z')
+  const lunes = new Date(hoy.getTime() - ((hoy.getUTCDay() + 6) % 7) * 86400000)
+  const semanas = Array.from({ length: 13 }, (_, i) => new Date(lunes.getTime() + i * 7 * 86400000).toISOString().slice(0, 10))
+  const filas = semanas.map((s, i) => {
+    const d = porSemana.get(s)
+    return { semana: i === 0 ? 'Esta semana' : fecha(s).slice(0, 6), Vencido: d?.vencido_usd ?? 0, Facturado: d?.facturado_usd ?? 0, 'Por facturar': d?.por_facturar_usd ?? 0 }
+  })
+  return (
+    <Card titulo="Cobros esperados · próximas 13 semanas" className="mt-4">
+      <div className="h-56 p-3">
+        <ResponsiveContainer>
+          <BarChart data={filas}>
+            <CartesianGrid stroke="var(--line)" vertical={false} />
+            <XAxis dataKey="semana" tick={{ fill: 'var(--text-2)', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={(v) => `$${Math.round(v / 1000)}k`} tick={{ fill: 'var(--text-2)', fontSize: 12 }} axisLine={false} tickLine={false} width={48} />
+            <Tooltip formatter={(v: number) => usd(v)} cursor={{ fill: 'var(--surface-2)' }}
+              contentStyle={{ background: 'var(--surface-1)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text-1)' }} />
+            <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text-2)' }} />
+            <Bar dataKey="Vencido" stackId="c" fill="var(--critical)" />
+            <Bar dataKey="Facturado" stackId="c" fill="var(--series-1)" />
+            <Bar dataKey="Por facturar" stackId="c" fill="var(--series-3)" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <Nota>Saldo de cada cuota en la semana en que vence; lo ya vencido se muestra en esta semana. Solo incluye cuotas ya planificadas: las renovaciones que aún no se registran no aparecen.</Nota>
+    </Card>
   )
 }

@@ -56,3 +56,12 @@ begin
   assert not (select cuadra from v_validacion_mes where periodo = '2026-01-01' and concepto = 'herramientas_usd'), 'herramientas no cuadra';
   assert (select diferencia from v_validacion_mes where periodo = '2026-01-01' and concepto = 'herramientas_usd') = -999, 'diferencia (las herramientas de enero se anularon arriba)';
 end $$;
+
+-- Indicadores: lo vencido cae en la semana actual; la concentración es una proporción
+do $$
+begin
+  assert not exists (select 1 from v_proyeccion_cobros where semana < date_trunc('week', current_date)), 'proyección: nada antes de esta semana';
+  assert coalesce((select sum(vencido_usd) from v_proyeccion_cobros), 0)
+       = coalesce((select sum(saldo_usd) from v_cuota where not pagada and vencimiento < current_date), 0), 'proyección: vencido completo';
+  assert (select coalesce(concentracion_top5, 0) between 0 and 1 from v_kpi_hoy_calc), 'concentración entre 0 y 1';
+end $$;

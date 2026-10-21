@@ -48,7 +48,7 @@ export function Kpi({ label, valor, detalle, tono, onClick }:
     {detalle && <div className="mt-0.5 text-xs text-t3">{detalle}</div>}
   </>
   return onClick
-    ? <button onClick={onClick} className="group w-full rounded-xl border border-line bg-s1 px-4 py-3 text-left transition hover:border-accent hover:shadow-sm">{contenido}</button>
+    ? <button onClick={onClick} className="group flex w-full flex-col rounded-xl border border-line bg-s1 px-4 py-3 text-left transition hover:border-accent hover:shadow-sm">{contenido}</button>
     : <div className="rounded-xl border border-line bg-s1 px-4 py-3">{contenido}</div>
 }
 

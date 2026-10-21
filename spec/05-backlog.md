@@ -43,7 +43,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 
 ## R4 · Insights
 - ✅ Dashboard: ventas, ingresos, recurrente, facturado, cobrado, GP, margen, cartera en dos miradas, ventas por categoría, top clientes, estructura de costos; cada tarjeta muestra cómo se calcula
-- ⬜ Retención de clientes, concentración top 5, DSO, forecast de caja 90 días
+- ✅ Cobros esperados 13 semanas (Cobranza), DSO y concentración top 5 (Resumen) · ⬜ retención de clientes · ⬜ proyección que incluya renovaciones aún no registradas
 
 ## Después
 - ⬜ Integración SUNAT API SIRE (RVIE): importar comprobantes emitidos de ambas empresas

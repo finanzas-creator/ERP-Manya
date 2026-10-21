@@ -83,7 +83,7 @@ export default function Resumen() {
           <Mirada color="var(--text-3)" titulo="Ventas sin plan de pagos" valor={usd(k?.falta_planificar_usd)}
             texto={`${k?.ventas_plan_descuadrado ?? 0} ventas por revisar · neto sin IGV`} onClick={opera ? () => navigate('/revision') : undefined} />
         </div>
-        <Nota>Renovaciones: {k?.renovaciones_30d ?? 0} en los próximos 30 días y {k?.renovaciones_vencidas ?? 0} vencidas sin renovar.</Nota>
+        <Nota>Días promedio de cobro (DSO): {k?.dso_dias ?? '—'} · Los 5 mayores clientes son el {pct(k?.concentracion_top5)} de la venta de los últimos 12 meses · Renovaciones: {k?.renovaciones_30d ?? 0} en los próximos 30 días y {k?.renovaciones_vencidas ?? 0} vencidas sin renovar.</Nota>
       </Card>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
