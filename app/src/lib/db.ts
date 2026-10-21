@@ -92,6 +92,7 @@ export type Database = {
       chk_anular_cuota: { Args: Record<string, unknown>; Returns: unknown }
       chk_cierre_tc: { Args: Record<string, unknown>; Returns: unknown }
       chk_cuota_comprobante: { Args: Record<string, unknown>; Returns: unknown }
+      consultar_ruc: { Args: Record<string, unknown>; Returns: unknown }
       copiar_costos_mes: { Args: Record<string, unknown>; Returns: unknown }
       detraccion_sugerida: { Args: Record<string, unknown>; Returns: unknown }
       edita_facturado_libre: { Args: Record<string, unknown>; Returns: unknown }

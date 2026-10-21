@@ -94,6 +94,10 @@ function EditarCliente({ id, inicial, onCerrar }:
   { id: string; inicial: { razon_social: string; ruc: string; no_domiciliado: boolean }; onCerrar: () => void }) {
   const qc = useQueryClient()
   const [f, setF] = useState(inicial)
+  const sunat = useMutation({
+    mutationFn: async () => ok(await supabase.rpc('consultar_ruc', { p_ruc: f.ruc.trim() })) as unknown as
+      { nombre: string; estado: string; condicion: string; direccion: string },
+  })
   const guardar = useMutation({
     mutationFn: async () => {
       if (!f.razon_social.trim()) throw new Error('La razón social no puede quedar vacía')
@@ -105,7 +109,20 @@ function EditarCliente({ id, inicial, onCerrar }:
     <Modal titulo="Datos del cliente" onCerrar={onCerrar}>
       <div className="flex flex-col gap-3">
         <Campo label="Razón social"><Input value={f.razon_social} onChange={(e) => setF({ ...f, razon_social: e.target.value })} autoFocus /></Campo>
-        <Campo label="RUC"><Input value={f.ruc} onChange={(e) => setF({ ...f, ruc: e.target.value })} /></Campo>
+        <Campo label="RUC">
+          <div className="flex gap-2">
+            <Input className="flex-1" value={f.ruc} onChange={(e) => { setF({ ...f, ruc: e.target.value }); sunat.reset() }} inputMode="numeric" />
+            <Boton onClick={() => sunat.mutate()} disabled={sunat.isPending || f.ruc.trim().length !== 11}>{sunat.isPending ? 'Buscando…' : 'Buscar en SUNAT'}</Boton>
+          </div>
+        </Campo>
+        {sunat.data && <div className="rounded-lg bg-s2 px-3 py-2 text-sm">
+          <div className="font-medium">{sunat.data.nombre}</div>
+          <div className={`text-xs ${sunat.data.estado === 'ACTIVO' && sunat.data.condicion === 'HABIDO' ? 'text-good' : 'text-critical'}`}>{sunat.data.estado} · {sunat.data.condicion}</div>
+          {sunat.data.direccion && <div className="text-xs text-t3">{sunat.data.direccion}</div>}
+          {sunat.data.nombre !== f.razon_social && <button className="mt-1 text-xs text-accent hover:underline"
+            onClick={() => setF({ ...f, razon_social: sunat.data!.nombre })}>Usar esta razón social</button>}
+        </div>}
+        <MensajeError error={sunat.error} />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={f.no_domiciliado} onChange={(e) => setF({ ...f, no_domiciliado: e.target.checked })} />
           No domiciliado (exportación: sus ventas nuevas van sin IGV, R-12)

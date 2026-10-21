@@ -16,7 +16,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Repositorio GitHub · ✅ proyecto Supabase con migraciones y datos (igual a local) · 🔄 usuarios en Auth (administrador invitado; faltan Tesorería y CEO) · ✅ hosting Cloudflare Pages (https://manya-erp.pages.dev) · ⬜ respaldos (plan Pro)
 
 ## R1 · Ventas y plan de pagos
-- ✅ Clientes (alta desde la venta) · ✅ lista y ficha de cliente (deuda, servicios, ventas) · ✅ edición de clientes y marcas
+- ✅ Clientes (alta desde la venta) · ✅ lista y ficha de cliente (deuda, servicios, ventas) · ✅ edición de clientes y marcas · ✅ consulta de RUC en SUNAT · ⬜ cargar el RUC de los 287 clientes (el sheet no lo tiene)
 - ✅ Registrar venta (servicio contratado + ciclo) con plantilla de pago → cuotas
 - ✅ Editar, agregar y anular cuotas; lo facturado solo lo corrige el administrador (R-13, R-14)
 - ✅ Renovaciones: lista por vencer + renovar en un clic (R-51)
