@@ -28,7 +28,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Emitir comprobante agrupando cuotas (detracción sugerida por R-22)
 - ✅ Registrar pago de cuota / de comprobante completo (R-32)
 - ✅ Cobranza: cartera por antigüedad
-- ⬜ Autodetracción (R-36)
+- ✅ Autodetracción desde el comprobante de la venta (R-36) · ⬜ confirmar si una autodetracción deja la cuota como pagada (hoy no cambia el saldo)
 - ✅ Revisión de datos: lista de ventas con plan descuadrado (426 al migrar)
 - ✅ Anular pagos registrados por error
 

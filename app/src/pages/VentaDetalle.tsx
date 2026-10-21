@@ -23,6 +23,7 @@ export default function VentaDetalle() {
   const [anular, setAnular] = useState<Anulacion | null>(null)
   const [editar, setEditar] = useState<Cuota | 'nueva' | null>(null)
   const [nuevoCosto, setNuevoCosto] = useState(false)
+  const [autodetraccion, setAutodetraccion] = useState<string | null>(null)
 
   const venta = useQuery({ queryKey: ['venta', id], queryFn: async () => ok(await supabase.from('v_venta').select('*').eq('id', id!).single()) })
   const cuotas = useQuery({ queryKey: ['cuotas', id], queryFn: async () => ok(await supabase.from('v_cuota').select('*').eq('venta_id', id!).order('orden')) })
@@ -31,7 +32,9 @@ export default function VentaDetalle() {
     enabled: !!cuotas.data,
     queryFn: async () => {
       const ids = [...new Set(cuotas.data!.map((c) => c.comprobante_id).filter(Boolean))] as string[]
-      return ids.length ? ok(await supabase.from('v_comprobante').select('id, serie_numero, tipo, empresa').in('id', ids)) : []
+      return ids.length ? ok(await supabase.from('v_comprobante')
+        .select('id, serie_numero, tipo, empresa, fecha_emision, moneda, total, pct_detraccion, detraccion, pagado_detraccion, saldo, pagado_100, autodetraccion_fecha')
+        .in('id', ids).order('fecha_emision')) : []
     },
   })
   const pagos = useQuery({
@@ -102,6 +105,22 @@ export default function VentaDetalle() {
                 </div>) },
             ]} />
           </Card>
+          {(comprobantes.data?.length ?? 0) > 0 && <Card titulo="Comprobantes">
+            <Tabla filas={comprobantes.data} clave={(c) => c.id!} columnas={[
+              { titulo: 'Comprobante', celda: (c) => <><div>{c.serie_numero ?? 'Comanda'}</div><div className="text-xs text-t3">{c.empresa} · {fecha(c.fecha_emision)}</div></> },
+              { titulo: 'Total', derecha: true, celda: (c) => dinero(c.total, c.moneda) },
+              { titulo: 'Detracción', derecha: true, celda: (c) => (c.pct_detraccion ?? 0) > 0
+                ? <><div>{dinero(c.detraccion, c.moneda)} <span className="text-xs text-t3">({pct(c.pct_detraccion)})</span></div>
+                    <div className="text-xs text-t3">{c.autodetraccion_fecha ? `autodetracción ${fecha(c.autodetraccion_fecha)}` : `pagada ${dinero(c.pagado_detraccion, c.moneda)}`}</div></>
+                : <span className="text-t3">—</span> },
+              { titulo: 'Saldo', derecha: true, celda: (c) => dinero(c.saldo, c.moneda) },
+              { titulo: '', celda: (c) => <div className="flex justify-end gap-1">
+                {(c.detraccion ?? 0) > (c.pagado_detraccion ?? 0) + 0.01 && !c.autodetraccion_fecha &&
+                  <Boton variante="fantasma" onClick={() => setAutodetraccion(c.id!)}>Autodetracción</Boton>}
+                <Boton variante="fantasma" onClick={() => setAnular({ tabla: 'comprobante', id: c.id!, titulo: `Anular ${c.serie_numero ?? 'comanda'}` })}>Anular</Boton>
+              </div> },
+            ]} />
+          </Card>}
           <CostosVenta ventaId={id!} terceros={v.naturaleza === 'terceros'} onAgregar={() => setNuevoCosto(true)}
             onAnular={(c) => setAnular({ tabla: 'costo_directo', id: c.id!, titulo: 'Anular costo' })} />
           <Card titulo="Pagos recibidos">
@@ -125,6 +144,7 @@ export default function VentaDetalle() {
       {editar && <CuotaModal ventaId={v.id!} cuota={editar === 'nueva' ? null : editar} faltaPlanificar={v.falta_planificar ?? 0}
         moneda={v.moneda ?? 'USD'} onCerrar={() => setEditar(null)}
         onAnular={(c) => { setEditar(null); setAnular({ tabla: 'cuota', id: c.id!, titulo: `Anular cuota ${c.orden}` }) }} />}
+      {autodetraccion && <AutodetraccionModal comprobanteId={autodetraccion} onCerrar={() => setAutodetraccion(null)} />}
       {nuevoCosto && <CostoModal ventaId={v.id!} terceros={v.naturaleza === 'terceros'} moneda={v.moneda ?? 'USD'} onCerrar={() => setNuevoCosto(false)} />}
       {anular && <AnularModal {...anular} onCerrar={() => setAnular(null)} />}
     </>
@@ -206,6 +226,27 @@ function CostoModal({ ventaId, terceros, moneda, onCerrar }: { ventaId: string; 
         <Campo label="Monto"><Input type="number" step="0.01" value={f.monto} onChange={set('monto')} autoFocus /></Campo>
         <div className="sm:col-span-2"><Campo label="Detalle"><Input value={f.descripcion} onChange={set('descripcion')} placeholder="Ej.: influencer @cuenta, Meta Ads" /></Campo></div>
       </div>
+      <div className="mt-3"><MensajeError error={guardar.error} /></div>
+      <div className="mt-4 flex justify-end gap-2">
+        <Boton onClick={onCerrar}>Cancelar</Boton>
+        <Boton variante="primario" disabled={guardar.isPending} onClick={() => guardar.mutate()}>Guardar</Boton>
+      </div>
+    </Modal>
+  )
+}
+
+/** R-36: la empresa pagó ella misma la detracción; se registra la fecha y no cambia el saldo del cliente. */
+function AutodetraccionModal({ comprobanteId, onCerrar }: { comprobanteId: string; onCerrar: () => void }) {
+  const qc = useQueryClient()
+  const [dia, setDia] = useState(hoyISO())
+  const guardar = useMutation({
+    mutationFn: async () => ok(await supabase.from('comprobante').update({ autodetraccion_fecha: dia }).eq('id', comprobanteId)),
+    onSuccess: () => { qc.invalidateQueries(); onCerrar() },
+  })
+  return (
+    <Modal titulo="Registrar autodetracción" onCerrar={onCerrar}>
+      <p className="mb-3 text-sm text-t2">Úsalo cuando la agencia depositó la detracción porque el cliente no lo hizo. Queda registrada la fecha; el saldo del cliente no cambia (R-36).</p>
+      <Campo label="Fecha del depósito"><Input type="date" value={dia} onChange={(e) => setDia(e.target.value)} /></Campo>
       <div className="mt-3"><MensajeError error={guardar.error} /></div>
       <div className="mt-4 flex justify-end gap-2">
         <Boton onClick={onCerrar}>Cancelar</Boton>
