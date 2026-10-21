@@ -543,7 +543,7 @@ def migrar(hojas):
         return s
 
     lineas_por_comp = collections.defaultdict(list)
-    cuotas_validas = []
+    cuotas_validas, cuota_por_codigo = [], {}
     for n, r in plan:
         if not txt(r[1]):
             continue
@@ -551,6 +551,16 @@ def migrar(hojas):
         if not vid:
             A.add("línea de facturación sin contrato", "Plan de facturacion", n, r[0], "línea omitida")
             continue
+        if r[0] in cuota_por_codigo:  # D-18: mismo código = misma cuota; se suman neto e IGV
+            primera, vid_primera = cuota_por_codigo[r[0]]
+            iguales = vid == vid_primera and primera[2] == r[2] and primera[6:11] == r[6:11]
+            A.add("línea repetida" if iguales else "línea repetida con datos distintos",
+                  "Plan de facturacion", n, r[0], "se suma a la primera" + ("" if iguales else "; revisar"))
+            for i in (3, 4):
+                primera[i] = (num(primera[i]) or 0.0) + (num(r[i]) or 0.0)
+            continue
+        r = list(r)
+        cuota_por_codigo[r[0]] = (r, vid)
         cuotas_validas.append((n, r, vid))
         nro = txt(r[8])
         tipo = TIPOS.get(clave(r[7]))

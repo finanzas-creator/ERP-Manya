@@ -23,14 +23,22 @@ En local se entra eligiendo un rol de prueba: Administrador, Tesorería o CEO.
 
 ## Publicar (producción)
 
-1. **Supabase:** crear el proyecto y aplicar `db/migrations/*.sql` en orden. No se aplica
-   `db/local/` (Supabase ya trae `auth` y los roles). Crear los usuarios en Auth y registrar
-   su rol en la tabla `usuario`.
-2. **Datos:** ejecutar `etl/out/carga.sql` contra la base de Supabase. Luego correr
-   `python3 etl/tests/doradas.py data/sheet.xlsx "<cadena de conexión>"`.
-3. **Vercel:** publicar `app/` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`, sin
-   `VITE_DEV_AUTH`.
-4. **Respaldos:** activar los respaldos diarios de Supabase.
+Producción: proyecto Supabase `manya-erp` (São Paulo, plan Free). No hay conexión directa a
+Postgres: todo se envía por la Management API con `db/supabase.py` y la variable
+`SUPABASE_ACCESS_TOKEN`.
+
+1. **Base:** `python3 db/supabase.py <ref> db/migrations/*.sql` (en orden). No se aplica
+   `db/local/` (Supabase ya trae `auth` y los roles). Una migración nueva se aplica igual,
+   solo ese archivo.
+2. **Datos:** `python3 etl/migrar.py data/sheet.xlsx etl/out --inserts` escribe, además de
+   `carga.sql`, los lotes `etl/out/lotes/NNN.sql` (INSERT, sin COPY, cada uno en su
+   transacción). Se envían en orden: `python3 db/supabase.py <ref> etl/out/lotes/*.sql`.
+   Antes, `make test` en local debe pasar; luego se comparan conteos y totales de
+   `v_ventas_mes`, `v_kpi_hoy_calc` y `v_gp_agencia_mes` entre local y Supabase.
+3. **Usuarios:** invitarlos en Auth y registrar su fila en `usuario` con el mismo id y su rol.
+4. **App:** Cloudflare Pages, publicando `app/` con `VITE_SUPABASE_URL` y
+   `VITE_SUPABASE_ANON_KEY`, sin `VITE_DEV_AUTH`.
+5. **Respaldos:** el plan Free no tiene respaldos diarios; pasar a Pro al usarlo a diario.
 
 ## Cambiar algo
 

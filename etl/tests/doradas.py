@@ -67,7 +67,10 @@ def ventas_por_mes(hojas, db, R):
 def cobranza(hojas, db, R, exc):
     """R-33/R-34: líneas 'Por Cobrar' del Plan de facturación = cuotas pendientes con el mismo saldo."""
     plan = registros(hojas, "Plan de facturacion", 27)
-    oficial = {r[0]: num(r[17]) or 0.0 for _, r in plan if r[1] and r[20] == "Por Cobrar"}
+    oficial = collections.defaultdict(float)  # D-18: líneas con el mismo código son una cuota
+    for _, r in plan:
+        if r[1] and r[20] == "Por Cobrar":
+            oficial[r[0]] += num(r[17]) or 0.0
     pagadas = {r[0] for _, r in plan if r[1] and r[20] == "Factura Pagada"}
     sistema = {k: (float(s), e) for k, s, e in query(db, """
         select c.codigo_legacy, q.saldo_usd, q.estado from v_cuota q join cuota c on c.id = q.id""")}
