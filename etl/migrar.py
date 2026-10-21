@@ -450,6 +450,10 @@ def migrar(hojas):
             igv_lineas[llave(r[1])].append((num(r[4]) or 0) / num(r[3]))
     igv_de_cuotas = {k: (0.0 if all(abs(x) < 1e-6 for x in v) else 0.18) for k, v in igv_lineas.items()}
 
+    # D-22: servicios mensuales que el sheet aún lista por renovar, con su vencimiento.
+    por_renovar = {llave(r[0]): fecha(r[3]) for r in hojas["Estado de renovaciones"][1:] if r[0] and fecha(r[3])}
+    r_codigo = lambda r: txt(r[1]) or txt(r[0])  # noqa: E731
+
     filas_sc, filas_venta, filas_cd = [], [], []
     venta_de_legacy, venta_info = {}, {}
     personas, equipos_usados = set(), set()
@@ -460,11 +464,13 @@ def migrar(hojas):
         ultima = filas[-1][1]
         mod_catalogo = srv_modalidad[(k[2], k[3])]
         if modalidad_fila(ultima) == "mensual":
-            estado = "finalizado" if ultima[9] == "No se renueva" else "activo"
+            # D-22: sigue activo solo si el sheet lo lista en 'Estado de renovaciones' con este mismo
+            # vencimiento; si no, se cerró ("No se renueva", renovado sin contrato nuevo o variante antigua).
             fin = fecha(ultima[9])
-            if estado == "activo" and (fin is None or fin < HOY):
-                A.add("servicio mensual sin ciclo vigente", "Contratos", filas[-1][0],
-                      f"{txt(ultima[1])}: {ultima[10]} hasta {fin}", "queda en renovaciones vencidas; revisar")
+            estado = "activo" if fin is not None and por_renovar.get(llave(r_codigo(ultima))) == fin else "finalizado"
+            if estado == "finalizado" and fin is not None and fin >= HOY - dt.timedelta(days=60):
+                A.add("servicio mensual cerrado en el sheet", "Contratos", filas[-1][0],
+                      f"{txt(ultima[1])}: {ultima[10]} hasta {fin}", "migrado como finalizado (D-22)")
         else:
             fin = fecha(ultima[12])
             estado = "activo" if (fin is None or fin >= HOY) and fecha(ultima[2]) >= HOY - dt.timedelta(days=180) \

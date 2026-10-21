@@ -15,7 +15,7 @@ como *(config)* se cambian en Configuración, no en el código.
 - **R-07** La categoría y la línea de negocio de una venta vienen del catálogo (servicio → categoría → línea).
 
 ## Plan de pagos (cuotas)
-- **R-10** Cada venta tiene una o más cuotas. La suma del neto de sus cuotas debe igualar el neto de la venta; la diferencia se muestra como **falta planificar**.
+- **R-10** Cada venta tiene una o más cuotas. La suma del neto de sus cuotas debe igualar el neto de la venta; la diferencia se muestra como **falta planificar**. Una diferencia dentro de la tolerancia de redondeo de R-33 cuenta como plan completo (y no se cobra); una venta de monto 0 no necesita cuotas.
 - **R-11** Al crear una venta se elige una **plantilla de pago** (100% al inicio, 50/50, 60/40, 100% al finalizar…) que genera las cuotas. Después se pueden editar.
 - **R-12** IGV de una cuota = neto × % IGV de la venta (18% por defecto *(config)*; 0% para clientes no domiciliados/exportación).
 - **R-13** Lo facturado es un documento legal: el monto de una cuota con comprobante, y el % IGV o la moneda de una venta con cuotas facturadas, solo los puede corregir el **administrador**.

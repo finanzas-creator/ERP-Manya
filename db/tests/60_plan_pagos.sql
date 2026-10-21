@@ -43,3 +43,23 @@ begin
   assert (select monto_neto from cuota where id = '00000000-0000-0000-0000-0000000000b1') = 900, 'R-13 admin corrige';
 end $$;
 reset role;
+
+-- R-10 + R-33: centavos de diferencia cuentan como plan completo; una venta de monto 0 no necesita cuotas
+insert into plantilla_pago (nombre) values ('100% inicio');
+insert into plantilla_pago_item values ((select max(id) from plantilla_pago), 1, '100%', 1, 'inicio');
+do $$
+declare v1 uuid; v0 uuid; pl smallint := (select max(id) from plantilla_pago);
+begin
+  v1 := registrar_venta(p_cliente => '00000000-0000-0000-0000-0000000000c2', p_servicio => 2,
+                        p_fecha_contrato => '2026-05-01', p_monto_neto => 1000, p_plantilla => pl);
+  update cuota set monto_neto = 999.70 where venta_id = v1;
+  assert (select estado_plan from v_venta where id = v1) = 'cuadra', 'R-10 centavos = plan completo';
+  assert (select saldo from v_venta where id = v1) = 999.70 * 1.18, 'R-10 los centavos no se cobran';
+  update cuota set monto_neto = 900 where venta_id = v1;
+  assert (select estado_plan from v_venta where id = v1) = 'falta_planificar', 'R-10 falta de verdad';
+
+  v0 := registrar_venta(p_cliente => '00000000-0000-0000-0000-0000000000c2', p_servicio => 2,
+                        p_fecha_contrato => '2026-05-01', p_monto_neto => 0, p_plantilla => pl);
+  update cuota set anulado_en = now(), anulado_motivo = 'prueba' where venta_id = v0;
+  assert (select estado_plan || '/' || estado_cobro from v_venta where id = v0) = 'cuadra/pagada', 'R-10 venta en 0';
+end $$;

@@ -8,7 +8,6 @@ cualquier diferencia nueva hace fallar la prueba.
 """
 import collections
 import csv
-import datetime as dt
 import os
 import subprocess
 import sys
@@ -97,18 +96,14 @@ def cobranza_por_contrato(hojas, db, R, exc):
 
 
 def renovaciones(hojas, db, R, exc):
-    """R-50: pestaña 'Estado de renovaciones' = servicios mensuales activos que vencen desde el día
-    en que se calculó el sheet (vencimiento − 'Fecha en días'), o desde antes si el sheet aún lista
-    alguno recién vencido. Un código del sheet compartido por varios clientes se migra separado
-    (código · cliente · ...)."""
+    """R-50/D-22: pestaña 'Estado de renovaciones' = todos los servicios mensuales activos con su
+    vencimiento (también los ya vencidos). Un código del sheet compartido por varios clientes se
+    migra separado (código · cliente · ...)."""
     filas = [r for r in hojas["Estado de renovaciones"][1:] if r[0] and fecha(r[3])]
-    hoy_sheet = collections.Counter(fecha(r[3]) - dt.timedelta(days=int(num(r[6])))
-                                    for r in filas if num(r[6]) is not None).most_common(1)[0][0]
-    desde = min([hoy_sheet] + [fecha(r[3]) for r in filas])
     oficial = {(llave(r[0]), str(fecha(r[3]))) for r in filas}
-    sistema = {(llave(k.split(" · ")[0]), v) for k, v in query(db, f"""
+    sistema = {(llave(k.split(" · ")[0]), v) for k, v in query(db, """
         select sc.codigo_legacy, r.vence from v_renovacion r
-        join servicio_contratado sc on sc.id = r.servicio_contratado_id where r.vence >= '{desde}'""")}
+        join servicio_contratado sc on sc.id = r.servicio_contratado_id""")}
     difs = [d for d in sorted(("solo sheet",) + x for x in oficial - sistema) +
             sorted(("solo sistema",) + x for x in sistema - oficial) if ("renovaciones", d[1]) not in exc]
     R.check("Servicios por renovar y su vencimiento", "R-50", difs, len(oficial))
