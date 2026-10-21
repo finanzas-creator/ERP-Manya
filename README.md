@@ -38,8 +38,14 @@ Postgres: todo se envía por la Management API con `db/supabase.py` y la variabl
 3. **Usuarios:** invitarlos en Auth y registrar su fila en `usuario` con el mismo id y su rol.
    En Auth, la *Site URL* debe ser la dirección de la app: el correo de invitación lleva a la
    app, donde la persona crea su contraseña. "Olvidé mi contraseña" usa el mismo flujo.
-4. **App:** Cloudflare Pages, publicando `app/` con `VITE_SUPABASE_URL` y
-   `VITE_SUPABASE_ANON_KEY`, sin `VITE_DEV_AUTH`.
+   Para recargar desde cero, primero vaciar la carga: `truncate` de las tablas que llenan los
+   lotes (nunca `config`, `usuario`, `auditoria` ni `cierre_mensual`) con `restart identity`.
+4. **App:** https://manya-erp.pages.dev — proyecto Cloudflare Pages `manya-erp` (subida
+   directa, sin Git). Compilar `app/` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (la
+   clave anon de Supabase), sin `VITE_DEV_AUTH`, y publicar con
+   `npx wrangler pages deploy app/dist --project-name manya-erp --branch main`
+   (usa `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`). En Supabase Auth, *Site URL* y la
+   lista de redirecciones apuntan a esa dirección.
 5. **Respaldos:** el plan Free no tiene respaldos diarios; pasar a Pro al usarlo a diario.
 
 ## Cambiar algo
