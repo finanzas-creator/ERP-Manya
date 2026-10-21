@@ -66,3 +66,20 @@ begin
 exception when others then
   assert sqlerrm like 'R-70%', sqlerrm;
 end $$;
+
+-- R-80: un visitante sin sesión no lee catálogos ni configuración (ni por funciones auxiliares)
+reset role;
+set role anon;
+do $$
+begin
+  perform cfg();
+  raise exception 'R-80 anon no debe leer la configuración';
+exception when insufficient_privilege then null;
+end $$;
+do $$
+begin
+  perform tc_de(current_date);
+  raise exception 'R-80 anon no debe leer el tipo de cambio';
+exception when insufficient_privilege then null;
+end $$;
+reset role;
