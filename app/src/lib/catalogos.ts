@@ -19,7 +19,7 @@ export const usePersonas = catalogo('personas', () =>
 export const usePlantillas = catalogo('plantillas', () =>
   supabase.from('plantilla_pago').select('id, nombre').order('id'))
 export const useCuentas = catalogo('cuentas', () =>
-  supabase.from('cuenta_bancaria').select('id, nombre, moneda, es_detraccion').eq('activo', true).order('nombre'))
+  supabase.from('cuenta_bancaria').select('id, nombre, moneda, es_detraccion, empresa_id').eq('activo', true).order('nombre'))
 export const useEmpresas = catalogo('empresas', () =>
   supabase.from('empresa').select('id, nombre').order('id'))
 export const useSubAreas = catalogo('sub_areas', () =>

@@ -162,7 +162,8 @@ PLANTILLAS = {
     "70% / 30%": [("70% inicial", 0.7, "inicio"), ("30% final", 0.3, "fin")],
 }
 
-EMPRESAS = ["Templates", "Manya Media"]
+# Las dos entidades de Manya (D-06): nombre corto que usa el sheet -> razón social y RUC.
+EMPRESAS = {"Templates": ("Templates Art SAC", "20524981042"), "Manya Media": ("Manya Media EIRL", "20606381132")}
 
 
 def empresa_de_serie(serie):
@@ -272,7 +273,7 @@ def migrar(hojas):
 
     # --- empresas, líneas, categorías
     emp_id = {n: i + 1 for i, n in enumerate(EMPRESAS)}
-    S.insert("empresa", ["id", "nombre"], [(i, n) for n, i in emp_id.items()], identidad=True)
+    S.insert("empresa", ["id", "nombre", "ruc"], [(i, *EMPRESAS[n]) for n, i in emp_id.items()], identidad=True)
     lin_id = {n: i + 1 for i, n in enumerate(LINEAS)}
     S.insert("linea_negocio", ["id", "nombre"], [(i, n) for n, i in lin_id.items()], identidad=True)
     cat_id = {}

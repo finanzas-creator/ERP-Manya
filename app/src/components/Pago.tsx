@@ -6,8 +6,8 @@ import { dinero, hoyISO } from '../lib/formato'
 import { Boton, Campo, Input, MensajeError, Modal, Select } from './ui'
 
 type Objetivo =
-  | { tipo: 'cuota'; id: string; saldo: number; moneda: string; descripcion: string }
-  | { tipo: 'comprobante'; id: string; saldo: number; moneda: string; descripcion: string }
+  | { tipo: 'cuota'; id: string; saldo: number; moneda: string; descripcion: string; empresaId?: number | null }
+  | { tipo: 'comprobante'; id: string; saldo: number; moneda: string; descripcion: string; empresaId?: number | null }
 
 /** Registrar un pago a una cuota (R-30) o a un comprobante completo (R-32). */
 export function PagoModal({ objetivo, onCerrar }: { objetivo: Objetivo; onCerrar: () => void }) {
@@ -18,6 +18,9 @@ export function PagoModal({ objetivo, onCerrar }: { objetivo: Objetivo; onCerrar
   const [tc, setTc] = useState(1)
   const [monto, setMonto] = useState('')
   const cuenta = cuentas?.find((c) => c.id === cuentaId)
+  // R-39: primero las cuentas de la empresa que emitió el comprobante
+  const propia = (c: { empresa_id: number | null }) => !objetivo.empresaId || !c.empresa_id || c.empresa_id === objetivo.empresaId
+  const otraEmpresa = !!cuenta && !propia(cuenta)
 
   // TC del mes (R-06) cuando la cuenta está en otra moneda que la venta
   useEffect(() => {
@@ -53,10 +56,17 @@ export function PagoModal({ objetivo, onCerrar }: { objetivo: Objetivo; onCerrar
       <div className="mb-3 text-sm text-t2">{objetivo.descripcion} · saldo <b className="num text-t1">{dinero(objetivo.saldo, objetivo.moneda)}</b></div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Campo label="Fecha de pago"><Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></Campo>
-        <Campo label="Cuenta" ayuda={cuenta?.es_detraccion ? 'Cuenta de detracciones (R-31)' : undefined}>
+        <Campo label="Cuenta" ayuda={otraEmpresa
+            ? <span className="text-warning">Es una cuenta de la otra empresa: se registra, pero queda para regularizar entre empresas (R-39).</span>
+            : cuenta?.es_detraccion ? 'Cuenta de detracciones (R-31)' : undefined}>
           <Select value={cuentaId} onChange={(e) => setCuentaId(Number(e.target.value))}>
             <option value="">Seleccionar…</option>
-            {cuentas?.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            <optgroup label={objetivo.empresaId ? 'Cuentas de la empresa emisora' : 'Cuentas'}>
+              {cuentas?.filter(propia).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </optgroup>
+            {objetivo.empresaId && <optgroup label="Cuentas de la otra empresa">
+              {cuentas?.filter((c) => !propia(c)).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </optgroup>}
           </Select>
         </Campo>
         <Campo label={`Monto recibido${cuenta ? ` (${cuenta.moneda})` : ''}`}>

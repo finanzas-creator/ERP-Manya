@@ -34,7 +34,7 @@ export default function VentaDetalle() {
     queryKey: ['comprobantes-cliente', venta.data?.cliente_id],
     enabled: !!venta.data?.cliente_id,
     queryFn: async () => ok(await supabase.from('v_comprobante')
-      .select('id, serie_numero, tipo, empresa, cliente, fecha_emision, moneda, total, pct_detraccion, detraccion, pagado_detraccion, saldo, pagado_100, autodetraccion_fecha')
+      .select('id, serie_numero, tipo, empresa, empresa_id, cliente, fecha_emision, moneda, total, pct_detraccion, detraccion, pagado_detraccion, saldo, pagado_100, autodetraccion_fecha')
       .eq('cliente_id', venta.data!.cliente_id!).order('fecha_emision')),
   })
   const idsComprobante = new Set((cuotas.data ?? []).map((c) => c.comprobante_id).filter(Boolean))
@@ -148,7 +148,7 @@ export default function VentaDetalle() {
       </div>
 
       {pagar && <PagoModal onCerrar={() => setPagar(null)} objetivo={{
-        tipo: 'cuota', id: pagar.id!, saldo: pagar.saldo ?? 0, moneda: pagar.moneda ?? 'USD',
+        tipo: 'cuota', id: pagar.id!, saldo: pagar.saldo ?? 0, moneda: pagar.moneda ?? 'USD', empresaId: comp(pagar.comprobante_id)?.empresa_id,
         descripcion: `Cuota ${pagar.orden} · ${pagar.concepto}` }} />}
       {emitir && <EmitirComprobante clienteId={v.cliente_id!} preseleccion={porFacturar.map((c) => c.id!)} onCerrar={() => setEmitir(false)} />}
       {editar && <CuotaModal ventaId={v.id!} cuota={editar === 'nueva' ? null : editar} faltaPlanificar={v.falta_planificar ?? 0}

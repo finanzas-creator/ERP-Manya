@@ -24,3 +24,4 @@
 | **GP (gross profit)** | Ingresos − costos asignados. Se mira de macro a micro: agencia → línea → equipo → cliente → venta. |
 | **Cierre mensual** | Bloqueo de un mes: ya no se puede modificar y se fija su tipo de cambio. |
 | **Anular** | Dejar sin efecto un registro con motivo. Nunca se borra. |
+- **Empresa emisora:** cada una de las dos entidades legales de Manya, con su propio RUC, series de comprobantes y cuentas bancarias: Templates Art SAC (20524981042) y Manya Media EIRL (20606381132). En el sheet, las facturas de Manya Media llevan el prefijo "MM" (MM E001-…).

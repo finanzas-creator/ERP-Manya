@@ -12,7 +12,7 @@ import { AutodetraccionesPendientes } from '../components/Autodetraccion'
 import type { Fila } from '../lib/db'
 
 type Linea = Fila<'v_cobranza'>
-type Comp = { comprobante_id: string; serie: string; cliente: string; cliente_id: string; vencimiento: string | null; tramo: string
+type Comp = { comprobante_id: string; serie: string; cliente: string; cliente_id: string; empresa_id: number | null; vencimiento: string | null; tramo: string
   dias: number; saldo: number; saldo_usd: number; moneda: string; venta_id: string }
 
 export default function Cobranza() {
@@ -30,7 +30,7 @@ export default function Cobranza() {
   const porComp = new Map<string, Comp>()
   for (const l of (data ?? []) as Linea[]) {
     const c = porComp.get(l.comprobante_id!) ?? { comprobante_id: l.comprobante_id!, serie: l.serie_numero ?? 'Comanda',
-      cliente: l.cliente!, cliente_id: l.cliente_id!, vencimiento: l.vencimiento, tramo: l.tramo!, dias: l.dias_atraso ?? 0, saldo: 0, saldo_usd: 0,
+      cliente: l.cliente!, cliente_id: l.cliente_id!, empresa_id: l.empresa_id, vencimiento: l.vencimiento, tramo: l.tramo!, dias: l.dias_atraso ?? 0, saldo: 0, saldo_usd: 0,
       moneda: l.moneda!, venta_id: l.venta_id! }
     c.saldo += l.saldo ?? 0
     c.saldo_usd += l.saldo_usd ?? 0
@@ -74,7 +74,7 @@ export default function Cobranza() {
       </Card>
       {gestion && <GestionModal clienteId={gestion.cliente_id} cliente={gestion.cliente} onCerrar={() => setGestion(null)} />}
       {pagar && <PagoModal onCerrar={() => setPagar(null)} objetivo={{
-        tipo: 'comprobante', id: pagar.comprobante_id, saldo: pagar.saldo, moneda: pagar.moneda,
+        tipo: 'comprobante', id: pagar.comprobante_id, saldo: pagar.saldo, moneda: pagar.moneda, empresaId: pagar.empresa_id,
         descripcion: `${pagar.serie} · ${pagar.cliente}` }} />}
     </>
   )
