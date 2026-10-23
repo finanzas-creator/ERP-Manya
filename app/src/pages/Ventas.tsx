@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ok, supabase } from '../lib/supabase'
 import { dinero, fecha, finDeMes, mesActual, usd } from '../lib/formato'
 import { Boton, Card, Estado, Input, Select, SelectorMes, Tabla, Titulo } from '../components/ui'
 import { Icono } from '../components/iconos'
+
+const Evolucion = lazy(() => import('../components/EvolucionVentas'))
 
 const COLS = 'id, codigo, fecha_contrato, cliente, marca, servicio, categoria, modalidad, naturaleza, moneda, monto_neto, monto_neto_usd, estado_plan, estado_cobro, saldo'
 
@@ -46,6 +48,7 @@ export default function Ventas() {
           <option value="sin_plan">Sin plan de pagos</option>
         </Select>
       </div>
+      <Suspense fallback={null}><Evolucion meses={kpi.data} mes={mes} onMes={setMes} /></Suspense>
       <Card titulo={<>{filas?.length ?? 0} ventas{!texto && !estado && <> · venta neta del mes <span className="num">{usd(ventasMes)}</span> <span className="font-normal text-t3">(sin terceros ni costo de proveedor)</span></>}</>}>
         <Tabla filas={filas} clave={(v) => v.id!} onFila={(v) => navigate(`/ventas/${v.id}`)} columnas={[
           { titulo: 'Fecha', celda: (v) => <span className="whitespace-nowrap">{fecha(v.fecha_contrato)}</span> },
