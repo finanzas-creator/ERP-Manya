@@ -164,8 +164,8 @@ export function Tabla<T>({ filas, columnas, clave, onFila, vacio = 'Sin registro
           {filas?.map((f) => (
             <tr key={clave(f)} onClick={onFila ? () => onFila(f) : undefined}
               className={`border-b border-line last:border-0 ${onFila ? 'cursor-pointer hover:bg-s2' : ''}`}>
-              {columnas.map((c) => (
-                <td key={c.titulo} className={`${px} py-2 align-top ${c.derecha ? 'num text-right whitespace-nowrap' : ''} ${c.className ?? ''}`}>
+              {columnas.map((c, i) => (
+                <td key={c.titulo} className={`${px} py-2 align-top ${i === 0 && !c.derecha ? 'min-w-40' : ''} ${c.derecha ? 'num text-right whitespace-nowrap' : ''} ${c.className ?? ''}`}>
                   {c.celda(f)}
                 </td>
               ))}

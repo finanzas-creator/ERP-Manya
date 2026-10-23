@@ -106,3 +106,10 @@ begin
   -- un servicio caído deja de contar como activo (R-53)
   assert not exists (select 1 from v_cliente_caido c join v_renovacion r on r.cliente_id = c.cliente_id where r.estado <> 'caida'), 'R-53/R-55';
 end $$;
+
+-- R-37: la cartera por cliente suma lo mismo que la cartera por comprobante
+do $$
+begin
+  assert abs((select coalesce(sum(por_cobrar_usd), 0) from v_cobranza_cliente) - (select coalesce(sum(saldo_usd), 0) from v_cobranza)) < 0.01, 'R-37 cartera por cliente = por comprobante';
+  assert abs((select coalesce(sum(vencido_usd), 0) from v_cobranza_cliente) - (select coalesce(sum(vencido_usd), 0) from v_morosidad)) < 0.01, 'R-37 vencido por cliente = morosidad';
+end $$;
