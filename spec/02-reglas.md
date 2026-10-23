@@ -53,6 +53,9 @@ como *(config)* se cambian en Configuración, no en el código.
 - **R-51** Renovar crea la siguiente venta copiando la anterior, con inicio = fin del ciclo anterior.
 - **R-52** Un servicio contratado se marca *finalizado* cuando no se renueva.
 
+- **R-53** **Cliente caído:** tuvo ingreso en los últimos 12 meses y hoy no tiene ingreso este mes ni en adelante (proyectos en curso) ni servicios mensuales vigentes; un servicio vencido hace más de 30 días sin renovar ya no cuenta. Se muestra desde cuándo (el mes siguiente a su último ingreso), si era **recurrente** o de **proyecto**, y su ingreso mensual promedio de los últimos 3 meses (lo que se dejó de facturar).
+- **R-54** **Retención mensual** (clientes recurrentes): de los clientes con ingreso recurrente el mes anterior, cuántos siguen este mes. Retenidos + perdidos = activos del mes anterior.
+
 ## Costos y rentabilidad (de macro a micro)
 - **R-60** Los costos en PEN (planilla, comisiones, herramientas en soles) se convierten con el TC del mes.
 - **R-61** **GP agencia** = ingresos − costos directos de ventas (costos de proveedor) − planilla − herramientas − comisiones pagadas. El costo de proveedor se resta una sola vez: aquí, no en los ingresos.

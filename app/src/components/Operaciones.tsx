@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ok, supabase } from '../lib/supabase'
 import { dinero, fecha, hoyISO } from '../lib/formato'
@@ -62,6 +62,10 @@ export function DevolucionModal({ comprobanteId, empresaId, descripcion, onCerra
   const { data: cuentas } = useCuentas()
   const [f, setF] = useState({ fecha: hoyISO(), cuenta: '', monto: '', tc: '1', detalle: '', operacion: '' })
   const cuenta = cuentas?.find((c) => String(c.id) === f.cuenta)
+  // Igual que al registrar un pago: el TC sugerido es el del día (D-14), no 1.
+  useEffect(() => {
+    supabase.rpc('tc_de', { fecha: f.fecha }).then((r) => r.data && setF((x) => ({ ...x, tc: String(r.data) })))
+  }, [f.fecha])
   const m = useMutation({
     mutationFn: async () => {
       if (!cuenta || !(Number(f.monto) > 0)) throw new Error('Completa cuenta y monto')

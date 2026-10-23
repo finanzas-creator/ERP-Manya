@@ -94,6 +94,7 @@ export default function Resumen() {
       </Card>
 
       <Morosos onCliente={opera ? (id) => navigate(`/clientes/${id}`) : undefined} />
+      <Retencion periodo={periodo} onCaidos={opera ? () => navigate('/clientes?vista=caidos') : undefined} />
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card titulo="Ingresos vs costos · últimos 12 meses" className="lg:col-span-2">
@@ -173,6 +174,29 @@ export default function Resumen() {
       {detalle && <DetalleKpi tipo={detalle} periodo={periodo} m={m} g={g} ventasCategoria={ventasCategoria}
         onCerrar={() => setDetalle(null)} onIr={opera ? (a) => navigate(a) : undefined} />}
     </>
+  )
+}
+
+/** R-53/R-54: retención de clientes recurrentes y los que se cayeron en los últimos 3 meses. */
+function Retencion({ periodo, onCaidos }: { periodo: string; onCaidos?: () => void }) {
+  const ret = useQuery({ queryKey: ['kpi_retencion'], queryFn: async () => ok(await supabase.from('v_kpi_retencion_mes').select('*').order('periodo')) })
+  const caidos = useQuery({ queryKey: ['kpi_caidos'], queryFn: async () => ok(await supabase.from('v_kpi_cliente_caido').select('*').eq('tipo', 'recurrente').order('ultimo_mes', { ascending: false })) })
+  const r = ret.data?.find((x) => x.periodo === periodo)
+  const recientes = (caidos.data ?? []).filter((c) => (c.meses_sin_ingreso ?? 99) <= 3)
+  const tasa = r && r.activos_mes_anterior ? (r.retenidos ?? 0) / r.activos_mes_anterior : null
+  return (
+    <Card titulo={`Clientes recurrentes · ${mesLargo(periodo)}`} className="mt-4"
+      accion={onCaidos && <button onClick={onCaidos} className="text-xs text-accent hover:underline">Ver todos los caídos</button>}>
+      <div className="grid gap-4 p-4 md:grid-cols-5">
+        <Mirada color="var(--series-1)" titulo="Activos" valor={r?.activos ?? '—'} texto="con ingreso recurrente en el mes" />
+        <Mirada color="var(--series-3)" titulo="Nuevos" valor={r?.nuevos ?? '—'} texto="primer mes con nosotros" />
+        <Mirada color="var(--critical)" titulo="Se fueron" valor={r?.perdidos ?? '—'} texto="estaban el mes anterior y este no" />
+        <Mirada color="var(--text-2)" titulo="Retención" valor={pct(tasa)} texto={`de ${r?.activos_mes_anterior ?? 0} del mes anterior siguen`} />
+        <Mirada color="var(--warning)" titulo="Caídos (3 meses)" valor={recientes.length} texto={`${usd(recientes.reduce((s, c) => s + (c.ingreso_mensual_usd ?? 0), 0))} al mes que ya no se facturan`} />
+      </div>
+      {recientes.length > 0 && <Nota>Caídos recientes: {recientes.slice(0, 8).map((c) => `${c.cliente} (${usd(c.ingreso_mensual_usd)}/mes)`).join(' · ')}{recientes.length > 8 ? '…' : ''}.
+        El mes en curso es provisional: una renovación que aún no se registra aparece como "se fue".</Nota>}
+    </Card>
   )
 }
 

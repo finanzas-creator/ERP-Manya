@@ -80,3 +80,18 @@ begin
   perform anular('gestion_cobranza', (select id from gestion_cobranza where detalle like 'Correo%'), 'prueba');
   assert (select estado_gestion from v_morosidad where cliente_id = c) = 'compromiso_incumplido', 'R-81 lo anulado no cuenta';
 end $$;
+
+-- R-53/R-54: un cliente caído no tiene ingreso actual ni servicios activos; la retención cuadra
+do $$
+begin
+  assert not exists (select 1 from v_cliente_caido c where exists (select 1 from v_renovacion r where r.cliente_id = c.cliente_id and r.dias_para_vencer >= -30)), 'R-53 caído sin servicios vigentes';
+  assert not exists (select 1 from v_cliente_caido c join v_cliente_mes m on m.cliente_id = c.cliente_id
+                     where m.periodo >= date_trunc('month', current_date)), 'R-53 caído sin ingreso actual';
+  assert not exists (select 1 from v_retencion_mes where retenidos + perdidos <> activos_mes_anterior), 'R-54 retenidos + perdidos = activos del mes anterior';
+  -- un proyecto que terminó hace 2 meses deja al cliente caído (si no tiene servicios mensuales)
+  insert into servicio_contratado (id, cliente_id, servicio_id, estado) values ('00000000-0000-0000-0000-00000000aa01', '00000000-0000-0000-0000-0000000000c2', 2, 'activo');
+  insert into venta (id, servicio_contratado_id, fecha_contrato, fecha_fin, moneda, monto_neto, pct_igv)
+  values ('00000000-0000-0000-0000-00000000aa02', '00000000-0000-0000-0000-00000000aa01',
+          (date_trunc('month', current_date) - interval '3 months')::date, (date_trunc('month', current_date) - interval '2 months')::date, 'USD', 1000, 0.18);
+  assert exists (select 1 from v_cliente_caido where cliente_id = '00000000-0000-0000-0000-0000000000c2' and tipo = 'proyecto'), 'R-53 cliente de proyecto terminado';
+end $$;
