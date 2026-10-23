@@ -8,6 +8,7 @@ import { subirArchivo, verArchivo } from '../lib/archivos'
 import { Boton, Campo, Card, Estado, Input, MensajeError, Modal, Nota, Panel, Renglon, Select, SelectorMes, Tabla, Titulo } from '../components/ui'
 import { PagoModal } from '../components/Pago'
 import { AnularModal } from '../components/Anular'
+import { DevolucionModal, Operaciones } from '../components/Operaciones'
 import type { Fila } from '../lib/db'
 
 type Comprobante = Fila<'v_facturacion'>
@@ -75,7 +76,7 @@ const ETIQUETA: Record<string, string> = { por_cobrar: 'Por cobrar', vencida: 'V
 
 function DetalleComprobante({ id, onCerrar }: { id: string; onCerrar: () => void }) {
   const qc = useQueryClient()
-  const [accion, setAccion] = useState<'pago' | 'nota' | 'anular' | null>(null)
+  const [accion, setAccion] = useState<'pago' | 'nota' | 'anular' | 'devolucion' | null>(null)
   const c = useQuery({ queryKey: ['comprobante', id], queryFn: async () => ok(await supabase.from('v_facturacion').select('*').eq('id', id).single()) }).data
   const cuotas = useQuery({ queryKey: ['comprobante-cuotas', id], queryFn: async () => ok(await supabase.from('cuota').select('id, venta_id, orden, concepto, monto_neto').eq('comprobante_id', id).is('anulado_en', null).order('orden')) })
   const ventas = useQuery({
@@ -83,10 +84,6 @@ function DetalleComprobante({ id, onCerrar }: { id: string; onCerrar: () => void
     queryFn: async () => ok(await supabase.from('v_venta').select('id, codigo, servicio, marca').in('id', [...new Set(cuotas.data!.map((q) => q.venta_id))])),
   })
   const notas = useQuery({ queryKey: ['notas', id], queryFn: async () => ok(await supabase.from('v_nota_credito').select('*').eq('comprobante_id', id).order('fecha_emision')) })
-  const pagos = useQuery({
-    queryKey: ['comprobante-pagos', id, cuotas.data?.length], enabled: !!cuotas.data?.length,
-    queryFn: async () => ok(await supabase.from('v_pago').select('id, fecha, cuenta, monto, moneda_cuenta, es_detraccion').in('cuota_id', cuotas.data!.map((q) => q.id)).order('fecha')),
-  })
   const subir = useMutation({
     mutationFn: async ({ tipo, archivo }: { tipo: 'pdf' | 'xml'; archivo: File }) => {
       const ruta = await subirArchivo('comprobantes', `${c!.empresa_ruc ?? c!.empresa_id}/${c!.serie_numero ?? id}`, archivo)
@@ -111,7 +108,7 @@ function DetalleComprobante({ id, onCerrar }: { id: string; onCerrar: () => void
         <Renglon label="Vence" valor={fecha(c.vencimiento ?? c.fecha_limite)} />
         <Renglon label="Neto" valor={dinero(c.neto, c.moneda)} />
         <Renglon label="Total con IGV" valor={dinero(c.total, c.moneda)} total />
-        {(c.pct_detraccion ?? 0) > 0 && <Renglon sangria label={`Detracción ${pct(c.pct_detraccion)}`} valor={dinero(c.detraccion, c.moneda)} />}
+        {vigente && (c.pct_detraccion ?? 0) > 0 && <Renglon sangria label={`Detracción ${pct(c.pct_detraccion)}`} valor={dinero(c.detraccion, c.moneda)} />}
         {(c.notas_credito_neto ?? 0) > 0 && <Renglon sangria label="Notas de crédito (neto)" valor={`− ${dinero(c.notas_credito_neto, c.moneda)}`} />}
         {c.saldo != null && <Renglon label="Saldo por cobrar" valor={dinero(c.saldo, c.moneda)} total tono={(c.saldo ?? 0) > 0.01 ? 'warning' : 'good'} />}
       </div>
@@ -122,7 +119,12 @@ function DetalleComprobante({ id, onCerrar }: { id: string; onCerrar: () => void
       {vigente && <div className="mt-4 flex flex-wrap gap-2">
         {(c.saldo ?? 0) > 0.01 && <Boton variante="primario" onClick={() => setAccion('pago')}>Registrar pago</Boton>}
         <Boton onClick={() => setAccion('nota')}>Nota de crédito</Boton>
+        {((c.pagado_banco ?? 0) + (c.pagado_detraccion ?? 0)) > 0.01 && <Boton onClick={() => setAccion('devolucion')}>Devolver dinero</Boton>}
         <Boton variante="peligro" onClick={() => setAccion('anular')}>Anular registro</Boton>
+      </div>}
+      {c.estado === 'sin_efecto' && <div className="mt-4 rounded-lg bg-s2 p-3 text-sm text-t2">
+        Factura sin efecto por nota de crédito. Si el cliente ya había pagado, puedes facturar de nuevo sus cuotas (el pago se aplica a la nueva factura) o devolverle el dinero.
+        <div className="mt-2"><Boton onClick={() => setAccion('devolucion')}>Devolver dinero</Boton></div>
       </div>}
 
       <Seccion titulo="Cuotas y ventas">
@@ -133,11 +135,8 @@ function DetalleComprobante({ id, onCerrar }: { id: string; onCerrar: () => void
           </div>
         ))}
       </Seccion>
-      <Seccion titulo={`Pagos (${pagos.data?.length ?? 0})`}>
-        {pagos.data?.length === 0 && <div className="text-sm text-t3">Sin pagos.</div>}
-        {pagos.data?.map((p) => (
-          <div key={p.id} className="flex justify-between gap-3 py-1 text-sm"><span>{fecha(p.fecha)} · {p.cuenta}{p.es_detraccion ? ' (detracción)' : ''}</span><span className="num">{dinero(p.monto, p.moneda_cuenta)}</span></div>
-        ))}
+      <Seccion titulo="Pagos y devoluciones">
+        <div className="-mx-5"><Operaciones compacta cuotaIds={cuotas.data?.map((q) => q.id)} /></div>
       </Seccion>
       <Seccion titulo={`Notas de crédito (${notas.data?.length ?? 0})`}>
         {notas.data?.map((n) => (
@@ -169,6 +168,7 @@ function DetalleComprobante({ id, onCerrar }: { id: string; onCerrar: () => void
 
       {accion === 'pago' && <PagoModal onCerrar={() => setAccion(null)} objetivo={{ tipo: 'comprobante', id, saldo: c.saldo ?? 0,
         moneda: c.moneda ?? 'USD', descripcion: `${c.serie_numero} · ${c.cliente}`, empresaId: c.empresa_id }} />}
+      {accion === 'devolucion' && <DevolucionModal comprobanteId={id} empresaId={c.empresa_id} descripcion={`${c.serie_numero} · ${c.cliente}`} onCerrar={() => setAccion(null)} />}
       {accion === 'nota' && <NotaCreditoModal comprobante={c} onCerrar={() => setAccion(null)} />}
       {accion === 'anular' && <AnularModal tabla="comprobante" id={id} titulo={`Anular el registro de ${c.serie_numero ?? 'la comanda'}`} onCerrar={() => setAccion(null)} />}
     </Panel>

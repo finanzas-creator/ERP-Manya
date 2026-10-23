@@ -33,6 +33,8 @@ como *(config)* se cambian en Configuración, no en el código.
 - **R-30** Un pago se registra contra una **cuota**, en una **cuenta bancaria**, con el monto recibido en la moneda de la cuenta y su tipo de cambio (1 si es USD). Monto USD = monto / TC.
 - **R-31** Si la cuenta es de detracciones (Banco de la Nación), el pago cuenta como detracción. Es un atributo de la cuenta, no del nombre del banco.
 - **R-32** Pagar un comprobante completo reparte el monto entre sus cuotas con saldo, en proporción a su saldo (se guardan pagos por cuota).
+- **R-40** Un pago a una factura completa es **una operación bancaria** aunque se reparta entre cuotas: lleva su N° de operación y se anula entera (solo si se registró por error).
+- **R-41** Una **devolución** es dinero que la empresa devuelve al cliente (p. ej. tras una nota de crédito): sale de una cuenta de la empresa emisora, no puede superar lo cobrado de la factura, cuenta en negativo en lo cobrado del mes y vuelve a abrir el saldo. Una cuota se puede anular cuando lo cobrado neto es cero.
 - **R-33** Saldo de una cuota = total (neto + IGV) − pagos. Se considera pagada si el saldo es ≤ **5 USD** *(config)* y además ≤ **2.5% del total** *(config)*: absorbe diferencias de cambio y redondeo, pero nunca una detracción pendiente (12%).
 - **R-34** Estado de una cuota: *por facturar* (sin comprobante) · *por cobrar* · *vencida* (hoy > vencimiento) · *pagada*.
 - **R-35** Un comprobante está pagado al 100% cuando todas sus cuotas están pagadas. Su **fecha de pago completo** es la del pago que lo completó.

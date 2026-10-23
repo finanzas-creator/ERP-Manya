@@ -34,7 +34,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Gestión de cobranza: morosos (+60 días) en el dashboard con su plan de acción; registro de llamadas, acuerdos y próximos pasos (R-37, R-38)
 - ✅ Autodetracción (R-36): alerta cuando el cliente paga el total sin detracción, hasta subir la constancia · ⬜ revisar las 681 de 2021–2025 que el sheet marca sin detracción ingresada
 - ✅ Revisión de datos: lista de ventas con plan descuadrado (426 al migrar)
-- ✅ Anular pagos registrados por error
+- ✅ Anular pagos registrados por error · ✅ por operación completa (R-40) · ✅ devoluciones al cliente (R-41) · ✅ N° de operación bancaria
 - ✅ Dos empresas (R-39): razón social y RUC; al pagar se proponen las cuentas de la empresa emisora; Revisión lista los 223 pagos que entraron a la cuenta de la otra empresa · ⬜ corregirlos en el sheet o regularizarlos
 - ⬜ ¿Estado de resultados y cobranza por empresa? (hoy consolidado, D-06)
 

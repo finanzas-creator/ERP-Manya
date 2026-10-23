@@ -1,6 +1,7 @@
 -- R-11, R-22, R-32, R-51, R-81
 insert into plantilla_pago (nombre) values ('60/40');
-insert into plantilla_pago_item values (1, 1, '60% inicial', 0.6, 'inicio'), (1, 2, '40% final', 0.4, 'fin');
+insert into plantilla_pago_item select id, n, c, p, m::momento_cuota from plantilla_pago,
+  (values (1, '60% inicial', 0.6, 'inicio'), (2, '40% final', 0.4, 'fin')) x(n, c, p, m) where nombre = '60/40';
 
 do $$
 declare vid uuid; nueva uuid; cid uuid; r record; n int;
@@ -8,7 +9,7 @@ begin
   -- R-11: venta de 1000.01 con plantilla 60/40 -> 600.01 + 400.00 (la última absorbe el redondeo)
   vid := registrar_venta(p_cliente => '00000000-0000-0000-0000-0000000000c2', p_servicio => 2,
                          p_fecha_contrato => '2026-05-01', p_fecha_fin => '2026-07-31',
-                         p_monto_neto => 1000.01, p_plantilla => 1::smallint);
+                         p_monto_neto => 1000.01, p_plantilla => (select id from plantilla_pago where nombre = '60/40'));
   select array_agg(monto_neto::numeric order by orden) as m, array_agg(fecha_limite order by orden) as f into r
     from cuota where venta_id = vid;
   assert r.m = array[600.01, 400.00]::numeric[], format('R-11 montos %s', r.m);
@@ -49,10 +50,10 @@ do $$
 declare v1 uuid; v2 uuid;
 begin
   v1 := registrar_venta(p_cliente => '00000000-0000-0000-0000-0000000000c2', p_servicio => 2,
-                        p_fecha_contrato => '2026-05-01', p_monto_neto => 500, p_plantilla => 1::smallint,
+                        p_fecha_contrato => '2026-05-01', p_monto_neto => 500, p_plantilla => (select id from plantilla_pago where nombre = '60/40'),
                         p_modalidad => 'mensual');
   v2 := registrar_venta(p_cliente => '00000000-0000-0000-0000-0000000000c2', p_servicio => 2,
-                        p_fecha_contrato => '2026-05-01', p_monto_neto => 500, p_plantilla => 1::smallint,
+                        p_fecha_contrato => '2026-05-01', p_monto_neto => 500, p_plantilla => (select id from plantilla_pago where nombre = '60/40'),
                         p_modalidad => 'proyecto');
   assert (select modalidad from venta where id = v1) = 'mensual', 'R-02 modalidad fijada en el contrato';
   assert (select modalidad from venta where id = v2) is null, 'R-02 igual al catálogo: no se guarda';

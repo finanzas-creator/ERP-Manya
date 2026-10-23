@@ -9,6 +9,7 @@ import { PagoModal } from '../components/Pago'
 import { EmitirComprobante } from '../components/EmitirComprobante'
 import { AnularModal, type TablaAnulable } from '../components/Anular'
 import { CuotaModal } from '../components/CuotaModal'
+import { Operaciones } from '../components/Operaciones'
 import { AutodetraccionModal, verConstancia } from '../components/Autodetraccion'
 import type { Fila } from '../lib/db'
 
@@ -44,10 +45,6 @@ export default function VentaDetalle() {
     enabled: !!venta.data?.cliente_id,
     queryFn: async () => ok(await supabase.from('v_autodetraccion').select('comprobante_id, estado, autodetraccion_constancia')
       .eq('cliente_id', venta.data!.cliente_id!)),
-  })
-  const pagos = useQuery({
-    queryKey: ['pagos', id],
-    queryFn: async () => ok(await supabase.from('v_pago').select('id, cuota_id, fecha, cuenta, monto, moneda_cuenta, tc, monto_usd, es_detraccion').eq('venta_id', id!).order('fecha')),
   })
   const renovar = useMutation({
     mutationFn: async () => ok(await supabase.rpc('renovar_venta', { p_venta: id })) as string,
@@ -134,15 +131,7 @@ export default function VentaDetalle() {
           <CostosVenta ventaId={id!} terceros={v.naturaleza === 'terceros'} onAgregar={() => setNuevoCosto(true)}
             onAnular={(c) => setAnular({ tabla: 'costo_directo', id: c.id!, titulo: 'Anular costo' })} />
           <Card titulo="Pagos recibidos">
-            <Tabla filas={pagos.data} clave={(p) => p.id!} vacio="Aún no hay pagos" columnas={[
-              { titulo: 'Fecha', celda: (p) => fecha(p.fecha) },
-              { titulo: 'Cuota', celda: (p) => `#${cuotas.data?.find((c) => c.id === p.cuota_id)?.orden ?? ''}` },
-              { titulo: 'Cuenta', celda: (p) => <>{p.cuenta}{p.es_detraccion && <span className="ml-1 text-xs text-t3">(detracción)</span>}</> },
-              { titulo: 'Monto', derecha: true, celda: (p) => dinero(p.monto, p.moneda_cuenta) },
-              { titulo: 'TC', derecha: true, celda: (p) => (p.tc === 1 ? '—' : p.tc) },
-              { titulo: 'USD', derecha: true, celda: (p) => dinero(p.monto_usd, 'USD') },
-              { titulo: '', celda: (p) => <Boton variante="fantasma" onClick={() => setAnular({ tabla: 'pago', id: p.id!, titulo: 'Anular pago' })}>Anular</Boton> },
-            ]} />
+            <Operaciones ventaId={id!} />
           </Card>
         </div>
       </div>

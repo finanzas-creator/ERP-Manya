@@ -17,6 +17,7 @@ export function PagoModal({ objetivo, onCerrar }: { objetivo: Objetivo; onCerrar
   const [cuentaId, setCuentaId] = useState<number | ''>('')
   const [tc, setTc] = useState(1)
   const [monto, setMonto] = useState('')
+  const [operacion, setOperacion] = useState('')
   const cuenta = cuentas?.find((c) => c.id === cuentaId)
   // R-39: primero las cuentas de la empresa que emitió el comprobante
   const propia = (c: { empresa_id: number | null }) => !objetivo.empresaId || !c.empresa_id || c.empresa_id === objetivo.empresaId
@@ -42,10 +43,10 @@ export function PagoModal({ objetivo, onCerrar }: { objetivo: Objetivo; onCerrar
       if (!cuenta || !(m > 0)) throw new Error('Completa cuenta y monto')
       const tcPago = cuenta.moneda === 'USD' ? 1 : tc
       if (objetivo.tipo === 'cuota') {
-        ok(await supabase.from('pago').insert({ cuota_id: objetivo.id, fecha, cuenta_id: cuenta.id, monto: m, tc: tcPago }))
+        ok(await supabase.from('pago').insert({ cuota_id: objetivo.id, fecha, cuenta_id: cuenta.id, monto: m, tc: tcPago, numero_operacion: operacion.trim() || null }))
       } else {
         ok(await supabase.rpc('registrar_pago_comprobante', {
-          p_comprobante: objetivo.id, p_fecha: fecha, p_cuenta: cuenta.id, p_monto: m, p_tc: tcPago }))
+          p_comprobante: objetivo.id, p_fecha: fecha, p_cuenta: cuenta.id, p_monto: m, p_tc: tcPago, p_numero_operacion: operacion.trim() || null }))
       }
     },
     onSuccess: () => { qc.invalidateQueries(); onCerrar() },
@@ -56,6 +57,7 @@ export function PagoModal({ objetivo, onCerrar }: { objetivo: Objetivo; onCerrar
       <div className="mb-3 text-sm text-t2">{objetivo.descripcion} · saldo <b className="num text-t1">{dinero(objetivo.saldo, objetivo.moneda)}</b></div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Campo label="Fecha de pago"><Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></Campo>
+        <Campo label="N° de operación (banco)"><Input value={operacion} onChange={(e) => setOperacion(e.target.value)} /></Campo>
         <Campo label="Cuenta" ayuda={otraEmpresa
             ? <span className="text-warning">Es una cuenta de la otra empresa: se registra, pero queda para regularizar entre empresas (R-39).</span>
             : cuenta?.es_detraccion ? 'Cuenta de detracciones (R-31)' : undefined}>
