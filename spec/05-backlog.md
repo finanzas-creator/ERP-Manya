@@ -19,7 +19,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Clientes (alta desde la venta) · ✅ lista y ficha de cliente (deuda, servicios, ventas) · ✅ edición de clientes y marcas · ✅ consulta de RUC en SUNAT · ⬜ cargar el RUC de los 287 clientes (el sheet no lo tiene)
 - ✅ Registrar venta (servicio contratado + ciclo) con plantilla de pago → cuotas
 - ✅ Editar, agregar y anular cuotas; lo facturado solo lo corrige el administrador (R-13, R-14)
-- ✅ Renovaciones: lista por vencer + renovar en un clic (R-51)
+- ✅ Renovaciones: lista por vencer + renovar en un clic (R-51) · ✅ estados vigente / por vencer / vencida / caída, ciclos y aviso de deuda (R-55)
 - ✅ Finalizar servicio contratado (R-52)
 - ✅ Generar plan de pagos para ventas que no lo tienen
 - ✅ Modalidad por venta (R-02, D-21) · ✅ elegirla al registrar la venta
@@ -30,7 +30,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Notas de crédito total y parcial (R-27, R-28) · ✅ una factura sin efecto se puede volver a facturar
 - ✅ Datos fiscales de cada empresa (dirección, ubigeo, series, cuentas) y del cliente (tipo de documento, dirección, correo)
 - ✅ Registrar pago de cuota / de comprobante completo (R-32)
-- ✅ Cobranza: cartera por antigüedad
+- ✅ Cobranza: cartera por antigüedad · ✅ por cliente ("¿Quién nos debe?")
 - ✅ Gestión de cobranza: morosos (+60 días) en el dashboard con su plan de acción; registro de llamadas, acuerdos y próximos pasos (R-37, R-38)
 - ✅ Autodetracción (R-36): alerta cuando el cliente paga el total sin detracción, hasta subir la constancia · ⬜ revisar las 681 de 2021–2025 que el sheet marca sin detracción ingresada
 - ✅ Revisión de datos: lista de ventas con plan descuadrado (426 al migrar)
@@ -49,7 +49,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 
 ## R4 · Insights
 - ✅ Dashboard: ventas, ingresos, recurrente, facturado, cobrado, GP, margen, cartera en dos miradas, ventas por categoría, top clientes, estructura de costos; cada tarjeta muestra cómo se calcula
-- ✅ Cobros esperados 13 semanas (Cobranza), DSO y concentración top 5 (Resumen) · ⬜ retención de clientes · ⬜ proyección que incluya renovaciones aún no registradas
+- ✅ Cobros esperados 13 semanas (Cobranza), DSO y concentración top 5 (Resumen) · ✅ retención de clientes y clientes caídos (R-53, R-54) · ✅ evolución de ventas desde 2021 · ⬜ proyección que incluya renovaciones aún no registradas
 
 ## Después
 - ⬜ Integración SUNAT API SIRE (RVIE): importar comprobantes emitidos de ambas empresas
@@ -57,4 +57,5 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ⬜ Control de pauta con consumo real (ManyaPulse)
 - ✅ Registrar costos de proveedor (influencers, producción) y consumo de pauta desde la venta, con su GP o control de pauta
 - ⬜ Alertas (vencimientos, renovaciones)
+- ✅ Catálogos editables en Configuración (servicios, categorías, líneas, cuentas, personas, equipos, sub-áreas, tipos de gestión) · ⬜ plantillas de plan de pagos
 - ⬜ Tipo de recibo y forma de pago de la planilla como catálogos (hoy texto con sugerencias)

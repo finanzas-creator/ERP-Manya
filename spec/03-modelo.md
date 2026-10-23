@@ -43,7 +43,7 @@ CONTROL
 | `v_comprobante` | Totales, detracción, pagado al 100% y cuándo | R-21, R-22, R-35 |
 | `v_venta` | Planificado, falta planificar, facturado, cobrado, estados | R-10 |
 | `v_cobranza` | Cartera pendiente con antigüedad | R-34 |
-| `v_renovacion` | Servicios mensuales activos y días para vencer | R-50 |
+| `v_renovacion` | Servicios mensuales activos, días para vencer, estado (vigente, por vencer, vencida, caída), ciclos y deuda vencida del cliente | R-50, R-55 |
 | `v_ventas_mes` | Ventas por fecha de contrato | R-03, R-04 |
 | `v_ingreso_venta_mes` / `v_ingresos_mes` | Ingresos por mes de ejecución | R-05 |
 | `v_comision_cuota` / `v_comision_persona_mes` | Comisión ganada vs pagada | R-41, R-42 |
@@ -58,6 +58,8 @@ CONTROL
 | `v_validacion_mes` | Cada mes, el total del sistema vs el que reportaba el sheet (`referencia_sheet`) | R-04, R-60, R-64 |
 | `v_proyeccion_cobros` | Saldo por cobrar por semana de vencimiento (vencido, facturado, por facturar) | R-23, R-33 |
 | `v_morosidad` | Clientes con deuda vencida, su última gestión y estado (sin gestión, compromiso incumplido…) | R-37, R-38 |
+| `v_cliente_mes` · `v_retencion_mes` · `v_cliente_caido` | Ingreso por cliente y mes; retención mensual de recurrentes; clientes caídos | R-53, R-54 |
+| `v_cobranza_cliente` | Cartera por cliente ("¿Quién nos debe?"): por cobrar, vencido, mayor atraso, gestión | R-37 |
 | `v_cliente` | Ficha del cliente: servicios activos, ventas 12 meses, por cobrar, vencido | R-33, R-52 |
 | `v_kpi_mes`, `v_kpi_hoy`, `v_kpi_linea_mes`, `v_kpi_gp_mes`, `v_kpi_ingresos_mes`, `v_kpi_ventas_categoria_mes`, `v_kpi_ventas_cliente_mes`, `v_kpi_pauta_mes` | Indicadores de lectura para los tres roles (el CEO no lee tablas operativas) | R-80 |
 
