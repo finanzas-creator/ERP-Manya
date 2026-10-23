@@ -52,6 +52,12 @@ como *(config)* se cambian en Configuración, no en el código.
 - **R-50** Un servicio contratado mensual activo vence en la **fecha fin** de su último ciclo (antes "Siguiente ciclo"). Los días para renovar se calculan contra hoy.
 - **R-51** Renovar crea la siguiente venta copiando la anterior, con inicio = fin del ciclo anterior.
 - **R-52** Un servicio contratado se marca *finalizado* cuando no se renueva.
+- **R-55** **Estado de una renovación** (servicio mensual activo), según los días para vencer:
+  *vigente* (faltan más de `renovacion_aviso_dias`, 30), *por vencer* (faltan 0 a 30),
+  *vencida* (venció hace hasta `renovacion_gracia_dias`, 30, sin renovar: hay que decidir) y
+  *caída* (venció hace más de 30 sin renovar: el cliente cuenta como caído, R-53). Se muestra cuántos
+  ciclos lleva el servicio (ventas del servicio) y la deuda vencida del cliente, porque renovar a un
+  cliente con deuda vencida es un riesgo. Las dos ventanas de días son configuración, no números en el código.
 
 - **R-53** **Cliente caído:** tuvo ingreso en los últimos 12 meses y hoy no tiene ingreso este mes ni en adelante (proyectos en curso) ni servicios mensuales vigentes; un servicio vencido hace más de 30 días sin renovar ya no cuenta. Se muestra desde cuándo (el mes siguiente a su último ingreso), si era **recurrente** o de **proyecto**, y su ingreso mensual promedio de los últimos 3 meses (lo que se dejó de facturar).
 - **R-54** **Retención mensual** (clientes recurrentes): de los clientes con ingreso recurrente el mes anterior, cuántos siguen este mes. Retenidos + perdidos = activos del mes anterior.

@@ -95,3 +95,14 @@ begin
           (date_trunc('month', current_date) - interval '3 months')::date, (date_trunc('month', current_date) - interval '2 months')::date, 'USD', 1000, 0.18);
   assert exists (select 1 from v_cliente_caido where cliente_id = '00000000-0000-0000-0000-0000000000c2' and tipo = 'proyecto'), 'R-53 cliente de proyecto terminado';
 end $$;
+
+-- R-55: estado de la renovación según los días para vencer y la configuración
+do $$
+begin
+  assert not exists (select 1 from v_renovacion where estado = 'por_vencer' and not dias_para_vencer between 0 and (cfg()).renovacion_aviso_dias), 'R-55 por vencer';
+  assert not exists (select 1 from v_renovacion where estado = 'vencida' and not dias_para_vencer between -(cfg()).renovacion_gracia_dias and -1), 'R-55 vencida';
+  assert not exists (select 1 from v_renovacion where estado = 'caida' and dias_para_vencer >= -(cfg()).renovacion_gracia_dias), 'R-55 caída';
+  assert not exists (select 1 from v_renovacion where ciclos < 1), 'R-55 ciclos';
+  -- un servicio caído deja de contar como activo (R-53)
+  assert not exists (select 1 from v_cliente_caido c join v_renovacion r on r.cliente_id = c.cliente_id where r.estado <> 'caida'), 'R-53/R-55';
+end $$;

@@ -15,6 +15,10 @@ export const ESTADOS: Record<string, { label: string; tono: Tono }> = {
   // servicio contratado (R-52)
   activo: { label: 'Activo', tono: 'good' },
   finalizado: { label: 'Finalizado', tono: 'neutral' },
+  // renovación (R-55); 'vencida' usa la etiqueta de arriba
+  vigente: { label: 'Vigente', tono: 'good' },
+  por_vencer: { label: 'Por vencer', tono: 'warning' },
+  caida: { label: 'Caída', tono: 'neutral' },
   // comprobante (R-27, R-81)
   sin_efecto: { label: 'Sin efecto (NC)', tono: 'neutral' },
   anulado: { label: 'Anulado', tono: 'neutral' },

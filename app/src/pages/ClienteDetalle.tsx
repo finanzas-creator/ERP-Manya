@@ -73,7 +73,8 @@ export default function ClienteDetalle() {
           <Tabla filas={servicios.data} clave={(s) => s.servicio_contratado_id!} onFila={(s) => navigate(`/ventas/${s.ultima_venta_id}`)} vacio="Sin servicios mensuales activos" columnas={[
             { titulo: 'Servicio', celda: (s) => <><div>{s.servicio}</div><div className="text-xs text-t3">{s.marca}</div></> },
             { titulo: 'Monto', derecha: true, celda: (s) => dinero(s.monto_neto, s.moneda) },
-            { titulo: 'Vence', celda: (s) => <span className={`whitespace-nowrap ${(s.dias_para_vencer ?? 0) < 0 ? 'text-critical' : ''}`}>{fecha(s.vence)}</span> },
+            { titulo: 'Vence', celda: (s) => <span className="whitespace-nowrap">{fecha(s.vence)}</span> },
+            { titulo: 'Estado', celda: (s) => <Estado valor={s.estado} /> },
           ]} />
         </Card>
       </div>
