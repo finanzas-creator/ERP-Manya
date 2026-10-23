@@ -13,6 +13,7 @@ export function EmitirComprobante({ clienteId, preseleccion, onCerrar }:
   const [empresa, setEmpresa] = useState<number | ''>('')
   const [tipo, setTipo] = useState('factura')
   const [serie, setSerie] = useState('')
+  const [serieEscrita, setSerieEscrita] = useState(false)   // lo que escribe el usuario manda sobre la sugerencia
   const [emision, setEmision] = useState(hoyISO())
   const [limite, setLimite] = useState('')
   const [elegidas, setElegidas] = useState<string[]>(preseleccion)
@@ -30,7 +31,7 @@ export function EmitirComprobante({ clienteId, preseleccion, onCerrar }:
     queryFn: async () => ok(await supabase.from('v_serie_comprobante').select('serie, siguiente')
       .eq('empresa_id', Number(empresa)).eq('tipo', tipo as 'factura').eq('activo', true).order('serie')),
   })
-  useEffect(() => { if (series.data?.[0]) setSerie(series.data[0].siguiente!) }, [series.data])
+  useEffect(() => { if (series.data?.[0] && !serieEscrita) setSerie(series.data[0].siguiente!) }, [series.data, serieEscrita])
 
   useEffect(() => {   // detracción sugerida por la regla R-22; editable
     if (!elegidas.length) { setDetraccion(null); return }
@@ -70,7 +71,7 @@ export function EmitirComprobante({ clienteId, preseleccion, onCerrar }:
         {tipo !== 'comanda' && <Campo label="Serie-número" ayuda={series.data && series.data.length > 1
             ? <>Otras series: {series.data.slice(1).map((x) => <button key={x.serie} type="button" className="mr-2 text-accent hover:underline" onClick={() => setSerie(x.siguiente!)}>{x.siguiente}</button>)}</>
             : series.data?.length ? 'Siguiente número de la serie' : undefined}>
-          <Input placeholder="E001-1234" value={serie} onChange={(e) => setSerie(e.target.value)} /></Campo>}
+          <Input placeholder="E001-1234" value={serie} onChange={(e) => { setSerie(e.target.value); setSerieEscrita(true) }} /></Campo>}
         <Campo label="Fecha de emisión"><Input type="date" value={emision} onChange={(e) => setEmision(e.target.value)} /></Campo>
         <Campo label="Vence (según cliente)"><Input type="date" value={limite} onChange={(e) => setLimite(e.target.value)} /></Campo>
         <Campo label="% detracción" ayuda="Sugerido por la regla R-22">

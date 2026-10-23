@@ -54,8 +54,6 @@ export default function Cobranza() {
           </button>
         ))}
       </div>
-      <AutodetraccionesPendientes />
-      <ProyeccionCobros />
       <div className="my-3 flex flex-wrap items-center gap-2">
         <Pestanas valor={vista} onCambio={setVista} opciones={[{ clave: 'cliente', label: '¿Quién nos debe?' }, { clave: 'comprobante', label: 'Por comprobante' }]} />
         <Input placeholder="Buscar cliente o comprobante…" value={texto} onChange={(e) => setTexto(e.target.value)} className="w-full sm:max-w-xs" />
@@ -74,6 +72,8 @@ export default function Cobranza() {
           </div> },
         ]} />
       </Card>}
+      <AutodetraccionesPendientes />
+      <ProyeccionCobros />
       {gestion && <GestionModal clienteId={gestion.cliente_id} cliente={gestion.cliente} onCerrar={() => setGestion(null)} />}
       {pagar && <PagoModal onCerrar={() => setPagar(null)} objetivo={{
         tipo: 'comprobante', id: pagar.comprobante_id, saldo: pagar.saldo, moneda: pagar.moneda, empresaId: pagar.empresa_id,

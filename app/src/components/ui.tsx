@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactElement, type ReactNode, type SelectHTMLAttributes } from 'react'
+import { cloneElement, isValidElement, useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactElement, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { ESTADOS, type Tono } from '../lib/estados'
 import { mesLargo, sumarMeses } from '../lib/formato'
 import { Icono } from './iconos'
@@ -67,7 +67,7 @@ export function SelectorMes({ mes, onCambio }: { mes: string; onCambio: (mes: st
 export function Pestanas<K extends string>({ opciones, valor, onCambio }:
   { opciones: { clave: K; label: ReactNode }[]; valor: K; onCambio: (k: K) => void }) {
   return (
-    <div className="inline-flex rounded-lg border border-line bg-s2 p-0.5" role="tablist">
+    <div className="inline-flex max-w-full overflow-x-auto rounded-lg border border-line bg-s2 p-0.5" role="tablist">
       {opciones.map((o) => (
         <button key={o.clave} role="tab" aria-selected={valor === o.clave} onClick={() => onCambio(o.clave)}
           className={`rounded-md px-3 py-1 text-sm whitespace-nowrap ${valor === o.clave ? 'bg-s1 font-medium text-t1 shadow-sm' : 'text-t2 hover:text-t1'}`}>
@@ -79,8 +79,22 @@ export function Pestanas<K extends string>({ opciones, valor, onCambio }:
 }
 
 /** Panel lateral para ver el detalle de un número sin salir de la pantalla. */
+// Escape cierra solo la ventana de más arriba (un modal abierto sobre un panel).
+const abiertas: (() => void)[] = []
+if (typeof window !== 'undefined') window.addEventListener('keydown', (e) => { if (e.key === 'Escape') abiertas.at(-1)?.() })
+function useCerrarConEscape(onCerrar: () => void) {
+  const actual = useRef(onCerrar)
+  useEffect(() => { actual.current = onCerrar })
+  useEffect(() => {   // se apila una vez al abrir; así un panel que se vuelve a pintar no pasa encima del modal
+    const cerrar = () => actual.current()
+    abiertas.push(cerrar)
+    return () => { abiertas.splice(abiertas.indexOf(cerrar), 1) }
+  }, [])
+}
+
 export function Panel({ titulo, subtitulo, onCerrar, children }:
   { titulo: ReactNode; subtitulo?: ReactNode; onCerrar: () => void; children: ReactNode }) {
+  useCerrarConEscape(onCerrar)
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onCerrar}>
       <aside className="h-full w-full max-w-md overflow-y-auto border-l border-line bg-s1 shadow-xl"
@@ -221,6 +235,7 @@ export const Select = (p: SelectHTMLAttributes<HTMLSelectElement>) => <select {.
 CONTROLES.push(Input, Select)
 
 export function Modal({ titulo, onCerrar, children }: { titulo: string; onCerrar: () => void; children: ReactNode }) {
+  useCerrarConEscape(onCerrar)
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={onCerrar}>
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-s1 shadow-xl"
