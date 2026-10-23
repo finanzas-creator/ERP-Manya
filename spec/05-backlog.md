@@ -25,7 +25,10 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Modalidad por venta (R-02, D-21) · ✅ elegirla al registrar la venta
 
 ## R2 · Facturación y cobranza
-- ✅ Emitir comprobante agrupando cuotas (detracción sugerida por R-22)
+- ✅ Emitir comprobante agrupando cuotas (detracción sugerida por R-22) · ✅ serie y número siguiente por empresa
+- ✅ Facturación: todos los comprobantes por empresa, mes y estado; detalle con cuotas, pagos, notas y archivos PDF/XML
+- ✅ Notas de crédito total y parcial (R-27, R-28) · ✅ una factura sin efecto se puede volver a facturar
+- ✅ Datos fiscales de cada empresa (dirección, ubigeo, series, cuentas) y del cliente (tipo de documento, dirección, correo)
 - ✅ Registrar pago de cuota / de comprobante completo (R-32)
 - ✅ Cobranza: cartera por antigüedad
 - ✅ Gestión de cobranza: morosos (+60 días) en el dashboard con su plan de acción; registro de llamadas, acuerdos y próximos pasos (R-37, R-38)

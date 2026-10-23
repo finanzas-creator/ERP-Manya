@@ -71,3 +71,30 @@ begin
   update comprobante set autodetraccion_fecha = '2026-02-05', autodetraccion_constancia = 'autodetraccion/x.pdf' where id = cid;
   assert (select estado from v_autodetraccion where comprobante_id = cid) = 'conforme', 'R-36 conforme con constancia';
 end $$;
+
+-- R-27/R-28: notas de crédito
+do $$
+declare cid uuid := '00000000-0000-0000-0000-0000000000f1'; n1 uuid; nuevo uuid; antes numeric;
+begin
+  -- Parcial: baja la deuda (con IGV) y el ingreso del mes de la nota
+  antes := (select saldo from v_cuota where id = '00000000-0000-0000-0000-0000000000b1');
+  n1 := emitir_nota_credito(cid, 'E001-NC1', '2026-02-10', '04', 100);
+  assert (select saldo from v_cuota where id = '00000000-0000-0000-0000-0000000000b1') = antes - 118, 'R-28 saldo';
+  assert (select sum(ingreso_usd) from v_ingreso_venta_mes where venta_id = '00000000-0000-0000-0000-0000000000a1'
+          and periodo = '2026-02-01') = -100, 'R-28 ingreso del mes de la nota';
+  begin
+    perform emitir_nota_credito(cid, 'E001-NC2', '2026-02-10', '04', 950);
+    raise exception 'debió rechazar una nota mayor a lo que queda';
+  exception when others then assert sqlerrm like 'R-28%', sqlerrm;
+  end;
+  -- Total: la factura queda sin efecto y su cuota vuelve a "por facturar"; se puede facturar de nuevo
+  perform anular('pago', id, 'prueba') from pago where cuota_id = '00000000-0000-0000-0000-0000000000b1' and anulado_en is null;
+  perform emitir_nota_credito(cid, 'E001-NC3', '2026-02-11', '01');
+  assert (select coalesce(sum(ingreso_usd), 0) from v_ingreso_venta_mes where venta_id = '00000000-0000-0000-0000-0000000000a1'
+          and periodo = '2026-02-01') = 0, 'R-28 la parcial ya no aplica a una factura sin efecto';
+  assert (select estado from v_cuota where id = '00000000-0000-0000-0000-0000000000b1') = 'por_facturar', 'R-27 por facturar';
+  assert (select estado from v_facturacion where id = cid) = 'sin_efecto', 'R-27 factura sin efecto';
+  assert (select monto_neto from nota_credito where serie_numero = 'E001-NC3') = 900, 'R-27 total = lo que quedaba';
+  nuevo := emitir_comprobante(1::smallint, 'factura', 'E001-2', '2026-02-12', array['00000000-0000-0000-0000-0000000000b1'::uuid]);
+  assert (select comprobante_id from v_cuota where id = '00000000-0000-0000-0000-0000000000b1') = nuevo, 'R-21 se vuelve a facturar';
+end $$;

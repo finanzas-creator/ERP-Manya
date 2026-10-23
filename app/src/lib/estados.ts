@@ -15,6 +15,9 @@ export const ESTADOS: Record<string, { label: string; tono: Tono }> = {
   // servicio contratado (R-52)
   activo: { label: 'Activo', tono: 'good' },
   finalizado: { label: 'Finalizado', tono: 'neutral' },
+  // comprobante (R-27, R-81)
+  sin_efecto: { label: 'Sin efecto (NC)', tono: 'neutral' },
+  anulado: { label: 'Anulado', tono: 'neutral' },
   // gestión de cobranza (R-38)
   sin_gestion: { label: 'Sin gestión', tono: 'critical' },
   compromiso_incumplido: { label: 'Compromiso incumplido', tono: 'critical' },

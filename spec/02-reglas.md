@@ -24,6 +24,8 @@ como *(config)* se cambian en Configuración, no en el código.
 ## Comprobantes
 - **R-20** Un comprobante pertenece a una empresa emisora. Su identidad es empresa + tipo + serie-número y no se repite.
 - **R-21** Un comprobante agrupa una o más cuotas (pueden ser de varias ventas del mismo cliente). Su total es la suma de sus cuotas (neto + IGV): **nunca se digita**.
+- **R-27** Un comprobante emitido no se borra ni se edita: se corrige con una **nota de crédito** (catálogo 09 SUNAT). Una nota **total** (anulación de la operación, error en el RUC, devolución total) deja la factura **sin efecto** y sus cuotas vuelven a *por facturar*: se vuelven a facturar o, si la venta se cayó, se anula la venta. "Anular" un comprobante (R-81) queda solo para registros hechos por error en el sistema.
+- **R-28** Una nota **parcial** (descuento, devolución de una parte, ajuste) no puede superar lo que queda de la factura; se reparte entre sus cuotas en proporción a su neto, baja la deuda del cliente (con IGV) y baja el **ingreso** del mes en que se emite. Si luego la factura queda sin efecto, las parciales dejan de aplicar.
 - **R-22** Detracción: aplica a facturas con IGV cuyo total supera **S/ 700** *(config)*; el porcentaje es **12%** *(config)* por servicios empresariales. El % se fija en el comprobante al emitirlo (es un dato legal impreso).
 - **R-23** Vencimiento de una cuota: la fecha límite del comprobante (según cliente); si no tiene comprobante, la fecha límite de la cuota (según contrato).
 

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ok, supabase } from '../lib/supabase'
 import { dinero, fecha, usd } from '../lib/formato'
-import { Boton, Campo, Card, Estado, Input, Kpi, MensajeError, Modal, Tabla, Titulo } from '../components/ui'
+import { Boton, Campo, Card, Estado, Input, Kpi, MensajeError, Modal, Select, Tabla, Titulo } from '../components/ui'
 import { Icono } from '../components/iconos'
 import { HistorialGestion } from '../components/GestionCobranza'
 
@@ -32,6 +32,10 @@ export default function ClienteDetalle() {
       .eq('cliente_id', id!).order('fecha_contrato', { ascending: false }).limit(60)),
   })
   const c = cliente.data
+  const fiscal = useQuery({
+    queryKey: ['cliente-fiscal', id],
+    queryFn: async () => ok(await supabase.from('cliente').select('tipo_documento, direccion_fiscal, correo_facturacion').eq('id', id!).single()),
+  })
 
   return (
     <>
@@ -41,7 +45,9 @@ export default function ClienteDetalle() {
         <Link to={`/ventas/nueva?cliente=${id}`}><Boton variante="primario"><Icono nombre="mas" />Nueva venta</Boton></Link>
       </div>}>{c?.razon_social ?? 'Cliente'}</Titulo>
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-t2">
-        <span>RUC {c?.ruc ?? '—'}</span>
+        <span>{fiscal.data?.tipo_documento ?? 'RUC'} {c?.ruc ?? '—'}</span>
+        {fiscal.data?.direccion_fiscal && <span className="truncate">{fiscal.data.direccion_fiscal}</span>}
+        {fiscal.data?.correo_facturacion && <span>{fiscal.data.correo_facturacion}</span>}
         {c?.no_domiciliado && <span className="rounded-full bg-info-bg px-2 py-0.5 text-xs text-accent">No domiciliado · sin IGV</span>}
         <span>Marcas: {c?.marcas ?? '—'}</span>
         <button onClick={() => setNuevaMarca(true)} className="text-accent hover:underline">+ marca</button>
@@ -84,14 +90,15 @@ export default function ClienteDetalle() {
         ]} />
       </Card>
 
-      {editar && c && <EditarCliente id={id!} inicial={{ razon_social: c.razon_social ?? '', ruc: c.ruc ?? '', no_domiciliado: !!c.no_domiciliado }} onCerrar={() => setEditar(false)} />}
+      {editar && c && fiscal.data && <EditarCliente id={id!} inicial={{ razon_social: c.razon_social ?? '', ruc: c.ruc ?? '', no_domiciliado: !!c.no_domiciliado,
+        tipo_documento: fiscal.data.tipo_documento, direccion_fiscal: fiscal.data.direccion_fiscal ?? '', correo_facturacion: fiscal.data.correo_facturacion ?? '' }} onCerrar={() => setEditar(false)} />}
       {nuevaMarca && <NuevaMarca clienteId={id!} onCerrar={() => setNuevaMarca(false)} />}
     </>
   )
 }
 
 function EditarCliente({ id, inicial, onCerrar }:
-  { id: string; inicial: { razon_social: string; ruc: string; no_domiciliado: boolean }; onCerrar: () => void }) {
+  { id: string; inicial: { razon_social: string; ruc: string; no_domiciliado: boolean; tipo_documento: string; direccion_fiscal: string; correo_facturacion: string }; onCerrar: () => void }) {
   const qc = useQueryClient()
   const [f, setF] = useState(inicial)
   const sunat = useMutation({
@@ -101,7 +108,8 @@ function EditarCliente({ id, inicial, onCerrar }:
   const guardar = useMutation({
     mutationFn: async () => {
       if (!f.razon_social.trim()) throw new Error('La razón social no puede quedar vacía')
-      ok(await supabase.from('cliente').update({ razon_social: f.razon_social.trim(), ruc: f.ruc.trim() || null, no_domiciliado: f.no_domiciliado }).eq('id', id))
+      ok(await supabase.from('cliente').update({ razon_social: f.razon_social.trim(), ruc: f.ruc.trim() || null, no_domiciliado: f.no_domiciliado,
+        tipo_documento: f.tipo_documento as 'RUC', direccion_fiscal: f.direccion_fiscal.trim() || null, correo_facturacion: f.correo_facturacion.trim() || null }).eq('id', id))
     },
     onSuccess: () => { qc.invalidateQueries(); onCerrar() },
   })
@@ -109,7 +117,13 @@ function EditarCliente({ id, inicial, onCerrar }:
     <Modal titulo="Datos del cliente" onCerrar={onCerrar}>
       <div className="flex flex-col gap-3">
         <Campo label="Razón social"><Input value={f.razon_social} onChange={(e) => setF({ ...f, razon_social: e.target.value })} autoFocus /></Campo>
-        <Campo label="RUC">
+        <Campo label="Tipo de documento">
+          <Select value={f.tipo_documento} onChange={(e) => setF({ ...f, tipo_documento: e.target.value })}>
+            <option value="RUC">RUC</option><option value="DNI">DNI</option><option value="CE">Carné de extranjería</option>
+            <option value="PASAPORTE">Pasaporte</option><option value="SIN_DOCUMENTO">Sin documento (no domiciliado)</option>
+          </Select>
+        </Campo>
+        <Campo label="N° de documento">
           <div className="flex gap-2">
             <Input className="flex-1" value={f.ruc} onChange={(e) => { setF({ ...f, ruc: e.target.value }); sunat.reset() }} inputMode="numeric" />
             <Boton onClick={() => sunat.mutate()} disabled={sunat.isPending || f.ruc.trim().length !== 11}>{sunat.isPending ? 'Buscando…' : 'Buscar en SUNAT'}</Boton>
@@ -119,10 +133,12 @@ function EditarCliente({ id, inicial, onCerrar }:
           <div className="font-medium">{sunat.data.nombre}</div>
           <div className={`text-xs ${sunat.data.estado === 'ACTIVO' && sunat.data.condicion === 'HABIDO' ? 'text-good' : 'text-critical'}`}>{sunat.data.estado} · {sunat.data.condicion}</div>
           {sunat.data.direccion && <div className="text-xs text-t3">{sunat.data.direccion}</div>}
-          {sunat.data.nombre !== f.razon_social && <button className="mt-1 text-xs text-accent hover:underline"
-            onClick={() => setF({ ...f, razon_social: sunat.data!.nombre })}>Usar esta razón social</button>}
+          <button className="mt-1 text-xs text-accent hover:underline"
+            onClick={() => setF({ ...f, razon_social: sunat.data!.nombre, direccion_fiscal: sunat.data!.direccion?.trim() || f.direccion_fiscal })}>Usar estos datos</button>
         </div>}
         <MensajeError error={sunat.error} />
+        <Campo label="Dirección fiscal"><Input value={f.direccion_fiscal} onChange={(e) => setF({ ...f, direccion_fiscal: e.target.value })} /></Campo>
+        <Campo label="Correo para enviar comprobantes"><Input type="email" value={f.correo_facturacion} onChange={(e) => setF({ ...f, correo_facturacion: e.target.value })} /></Campo>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={f.no_domiciliado} onChange={(e) => setF({ ...f, no_domiciliado: e.target.checked })} />
           No domiciliado (exportación: sus ventas nuevas van sin IGV, R-12)

@@ -3,6 +3,7 @@ const P: Record<string, string> = {
   resumen: 'M3 10l9-7 9 7v9a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 21v-9h6v9',
   clientes: 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
   ventas: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h5',
+  factura: 'M4 2h16v20l-3-2-3 2-2-2-2 2-3-2-3 2V2zM8 7h8M8 11h8M8 15h5',
   cobranza: 'M2 6h20v12H2zM12 14.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5',
   renovaciones: 'M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15',
   pauta: 'M3 11l15-6v14L3 13zM3 11v2M9 13v5a2 2 0 003.5 1.3',

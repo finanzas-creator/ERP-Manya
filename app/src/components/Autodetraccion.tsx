@@ -1,17 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ok, supabase } from '../lib/supabase'
+import { subirArchivo, verArchivo } from '../lib/archivos'
 import { dinero, fecha, hoyISO } from '../lib/formato'
 import { Boton, Campo, Card, Input, MensajeError, Modal, Nota, Tabla } from './ui'
 
-const CARPETA = 'constancias'
-
-/** Abre la constancia guardada (enlace temporal: la carpeta es privada). */
-export async function verConstancia(ruta: string) {
-  const { data, error } = await supabase.storage.from(CARPETA).createSignedUrl(ruta, 120)
-  if (error) throw new Error(error.message)
-  window.open(data.signedUrl, '_blank', 'noopener')
-}
+/** Abre la constancia guardada. */
+export const verConstancia = (ruta: string) => verArchivo('constancias', ruta)
 
 /** R-36: registrar el depósito de la autodetracción con su constancia de pago. */
 export function AutodetraccionModal({ comprobanteId, descripcion, onCerrar }:
@@ -23,9 +18,7 @@ export function AutodetraccionModal({ comprobanteId, descripcion, onCerrar }:
   const guardar = useMutation({
     mutationFn: async () => {
       if (!archivo) throw new Error('Adjunta la constancia de pago de la detracción')
-      const ruta = `autodetraccion/${comprobanteId}/${Date.now()}-${archivo.name.replace(/[^\w.-]+/g, '_')}`
-      const { error } = await supabase.storage.from(CARPETA).upload(ruta, archivo)
-      if (error) throw new Error(`No se pudo subir la constancia: ${error.message}`)
+      const ruta = await subirArchivo('constancias', `autodetraccion/${comprobanteId}`, archivo)
       ok(await supabase.from('comprobante').update({ autodetraccion_fecha: dia, autodetraccion_operacion: operacion.trim() || null,
         autodetraccion_constancia: ruta }).eq('id', comprobanteId))
     },

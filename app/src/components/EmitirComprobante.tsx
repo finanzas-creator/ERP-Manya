@@ -24,6 +24,14 @@ export function EmitirComprobante({ clienteId, preseleccion, onCerrar }:
       .eq('cliente_id', clienteId).is('comprobante_id', null).eq('pagada', false).order('fecha_contrato').order('venta_id').order('orden')),
   })
 
+  // R-39: series de la empresa elegida; se propone el siguiente número de la primera
+  const series = useQuery({
+    queryKey: ['series', empresa, tipo], enabled: !!empresa && tipo !== 'comanda',
+    queryFn: async () => ok(await supabase.from('v_serie_comprobante').select('serie, siguiente')
+      .eq('empresa_id', Number(empresa)).eq('tipo', tipo as 'factura').eq('activo', true).order('serie')),
+  })
+  useEffect(() => { if (series.data?.[0]) setSerie(series.data[0].siguiente!) }, [series.data])
+
   useEffect(() => {   // detracción sugerida por la regla R-22; editable
     if (!elegidas.length) { setDetraccion(null); return }
     supabase.rpc('detraccion_sugerida', { p_tipo: tipo, p_cuotas: elegidas, p_fecha: emision })
@@ -59,7 +67,10 @@ export function EmitirComprobante({ clienteId, preseleccion, onCerrar }:
             <option value="recibo_honorarios">Recibo por honorarios</option><option value="comanda">Comanda (interna)</option>
           </Select>
         </Campo>
-        {tipo !== 'comanda' && <Campo label="Serie-número"><Input placeholder="E001-1234" value={serie} onChange={(e) => setSerie(e.target.value)} /></Campo>}
+        {tipo !== 'comanda' && <Campo label="Serie-número" ayuda={series.data && series.data.length > 1
+            ? <>Otras series: {series.data.slice(1).map((x) => <button key={x.serie} type="button" className="mr-2 text-accent hover:underline" onClick={() => setSerie(x.siguiente!)}>{x.siguiente}</button>)}</>
+            : series.data?.length ? 'Siguiente número de la serie' : undefined}>
+          <Input placeholder="E001-1234" value={serie} onChange={(e) => setSerie(e.target.value)} /></Campo>}
         <Campo label="Fecha de emisión"><Input type="date" value={emision} onChange={(e) => setEmision(e.target.value)} /></Campo>
         <Campo label="Vence (según cliente)"><Input type="date" value={limite} onChange={(e) => setLimite(e.target.value)} /></Campo>
         <Campo label="% detracción" ayuda="Sugerido por la regla R-22">

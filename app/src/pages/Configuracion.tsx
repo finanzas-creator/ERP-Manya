@@ -3,13 +3,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ok, supabase } from '../lib/supabase'
 import { fecha, mesActual, mesLargo, sumarMeses } from '../lib/formato'
 import { ROLES } from '../lib/estados'
-import { Boton, Campo, Card, Input, MensajeError, Modal, Nota, Tabla, Titulo } from '../components/ui'
+import { Boton, Campo, Card, Input, MensajeError, Modal, Nota, Pestanas, Tabla, Titulo } from '../components/ui'
+import Empresas from './config/Empresas'
 
 /** Parámetros que alimentan los cálculos. Solo el administrador los cambia (R-80). */
 export default function Configuracion() {
+  const [vista, setVista] = useState<'general' | 'empresas'>('general')
   return (
     <>
       <Titulo>Configuración</Titulo>
+      <div className="mb-4"><Pestanas valor={vista} onCambio={setVista} opciones={[
+        { clave: 'general', label: 'General' }, { clave: 'empresas', label: 'Empresas' }]} /></div>
+      {vista === 'empresas' ? <Empresas /> : <General />}
+    </>
+  )
+}
+
+function General() {
+  return (
+    <>
       <div className="grid gap-4 lg:grid-cols-2">
         <TipoCambio />
         <div className="flex flex-col gap-4">

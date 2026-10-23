@@ -624,6 +624,10 @@ def migrar(hojas):
                 comp_de_linea[llave(l[1][0])] = cid
     S.copy("comprobante", ["id", "empresa_id", "tipo", "serie_numero", "fecha_emision", "fecha_limite",
                            "pct_detraccion", "autodetraccion_fecha"], filas_comp)
+    # Series en uso por empresa y tipo (catálogo para emitir los siguientes, R-39).
+    series = sorted({(f[1], f[2], f[3].split("-")[0]) for f in filas_comp
+                     if f[3] and re.fullmatch(r"[A-Z0-9]{4}-\d+", f[3])})
+    S.insert("serie_comprobante", ["empresa_id", "tipo", "serie"], series)
 
     filas_cuota, cuota_de_linea = [], collections.defaultdict(list)
     orden = collections.Counter()

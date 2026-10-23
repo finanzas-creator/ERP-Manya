@@ -16,6 +16,7 @@ const Ventas = lazy(() => import('./pages/Ventas'))
 const VentaDetalle = lazy(() => import('./pages/VentaDetalle'))
 const NuevaVenta = lazy(() => import('./pages/NuevaVenta'))
 const Cobranza = lazy(() => import('./pages/Cobranza'))
+const Facturacion = lazy(() => import('./pages/Facturacion'))
 const Renovaciones = lazy(() => import('./pages/Renovaciones'))
 const Pauta = lazy(() => import('./pages/Pauta'))
 const Rentabilidad = lazy(() => import('./pages/Rentabilidad'))
@@ -31,6 +32,7 @@ const NAV: { grupo: string; items: { a: string; label: string; icono: NombreIcon
     { a: '/', label: 'Resumen', icono: 'resumen', acceso: 'todos' },
     { a: '/clientes', label: 'Clientes', icono: 'clientes', acceso: 'opera' },
     { a: '/ventas', label: 'Ventas', icono: 'ventas', acceso: 'opera' },
+    { a: '/facturacion', label: 'Facturación', icono: 'factura', acceso: 'opera' },
     { a: '/cobranza', label: 'Cobranza', icono: 'cobranza', acceso: 'opera' },
     { a: '/renovaciones', label: 'Renovaciones', icono: 'renovaciones', acceso: 'opera' },
     { a: '/pauta', label: 'Pauta', icono: 'pauta', acceso: 'opera' },
@@ -109,6 +111,7 @@ export default function App() {
                 <Route path="/ventas" element={<Ventas />} />
                 <Route path="/ventas/nueva" element={<NuevaVenta />} />
                 <Route path="/ventas/:id" element={<VentaDetalle />} />
+                <Route path="/facturacion" element={<Facturacion />} />
                 <Route path="/cobranza" element={<Cobranza />} />
                 <Route path="/renovaciones" element={<Renovaciones />} />
                 <Route path="/pauta" element={<Pauta />} />
