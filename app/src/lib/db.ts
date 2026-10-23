@@ -160,6 +160,21 @@ export type Database = {
   }
 }
 
+// Valores de cada enum de la base, para los selectores (los define la base, no la app).
+export const ENUMS = {
+  concepto_referencia: ['ventas_usd', 'consumo_pauta_usd', 'planilla_pen', 'herramientas_usd', 'comisiones_pen'],
+  estado_servicio: ['activo', 'finalizado'],
+  grupo_costo: ['directo', 'direccion', 'overhead'],
+  modalidad: ['mensual', 'proyecto'],
+  momento_cuota: ['inicio', 'fin'],
+  moneda: ['USD', 'PEN'],
+  naturaleza: ['propio', 'terceros'],
+  rol: ['admin', 'tesoreria', 'ceo'],
+  tipo_comprobante: ['factura', 'boleta', 'recibo_honorarios', 'comanda'],
+  tipo_costo_directo: ['proveedor', 'consumo_pauta'],
+  tipo_documento: ['RUC', 'DNI', 'CE', 'PASAPORTE', 'SIN_DOCUMENTO'],
+} as const
+
 export type Fila<T extends keyof Database['public']['Views'] | keyof Database['public']['Tables']> =
   T extends keyof Database['public']['Views'] ? Database['public']['Views'][T]['Row']
   : T extends keyof Database['public']['Tables'] ? Database['public']['Tables'][T]['Row'] : never

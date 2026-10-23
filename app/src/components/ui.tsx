@@ -70,7 +70,7 @@ export function Pestanas<K extends string>({ opciones, valor, onCambio }:
     <div className="inline-flex rounded-lg border border-line bg-s2 p-0.5" role="tablist">
       {opciones.map((o) => (
         <button key={o.clave} role="tab" aria-selected={valor === o.clave} onClick={() => onCambio(o.clave)}
-          className={`rounded-md px-3 py-1 text-sm ${valor === o.clave ? 'bg-s1 font-medium text-t1 shadow-sm' : 'text-t2 hover:text-t1'}`}>
+          className={`rounded-md px-3 py-1 text-sm whitespace-nowrap ${valor === o.clave ? 'bg-s1 font-medium text-t1 shadow-sm' : 'text-t2 hover:text-t1'}`}>
           {o.label}
         </button>
       ))}

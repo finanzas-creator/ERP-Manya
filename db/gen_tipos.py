@@ -72,6 +72,7 @@ def main():
 
     funciones = "\n".join(f"      {f}: {{ Args: Record<string, unknown>; Returns: unknown }}"
                           for (f,) in q(db, FUNCIONES))
+    enums_const = "\n".join(f"  {k}: [" + ", ".join(f"'{x}'" for x in v) + "]," for k, v in sorted(enums.items()))
     enums_ts = "\n".join(f"      {k}: " + " | ".join(f"'{x}'" for x in v) for k, v in sorted(enums.items()))
     with open(salida, "w") as f:
         f.write(f"""// GENERADO por db/gen_tipos.py desde la base de datos. No editar a mano.
@@ -95,6 +96,11 @@ export type Database = {{
     CompositeTypes: {{ [_ in never]: never }}
   }}
 }}
+
+// Valores de cada enum de la base, para los selectores (los define la base, no la app).
+export const ENUMS = {{
+{enums_const}
+}} as const
 
 export type Fila<T extends keyof Database['public']['Views'] | keyof Database['public']['Tables']> =
   T extends keyof Database['public']['Views'] ? Database['public']['Views'][T]['Row']

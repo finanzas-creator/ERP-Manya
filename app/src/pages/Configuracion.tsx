@@ -5,16 +5,17 @@ import { fecha, mesActual, mesLargo, sumarMeses } from '../lib/formato'
 import { ROLES } from '../lib/estados'
 import { Boton, Campo, Card, Input, MensajeError, Modal, Nota, Pestanas, Tabla, Titulo } from '../components/ui'
 import Empresas from './config/Empresas'
+import Catalogos from './config/Catalogos'
 
 /** Parámetros que alimentan los cálculos. Solo el administrador los cambia (R-80). */
 export default function Configuracion() {
-  const [vista, setVista] = useState<'general' | 'empresas'>('general')
+  const [vista, setVista] = useState<'general' | 'empresas' | 'catalogos'>('general')
   return (
     <>
       <Titulo>Configuración</Titulo>
       <div className="mb-4"><Pestanas valor={vista} onCambio={setVista} opciones={[
-        { clave: 'general', label: 'General' }, { clave: 'empresas', label: 'Empresas' }]} /></div>
-      {vista === 'empresas' ? <Empresas /> : <General />}
+        { clave: 'general', label: 'General' }, { clave: 'empresas', label: 'Empresas' }, { clave: 'catalogos', label: 'Catálogos' }]} /></div>
+      {vista === 'empresas' ? <Empresas /> : vista === 'catalogos' ? <Catalogos /> : <General />}
     </>
   )
 }
