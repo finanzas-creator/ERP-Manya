@@ -57,7 +57,7 @@ def ventas_por_mes(hojas, db, R):
     R.check("Ventas por mes y categoría", "R-04", difs, len(oficial))
 
 
-def contratos(hojas, db, R):
+def contratos(hojas, db, R, exc):
     """R-01/R-04: cada fila de la pestaña 'Contratos' existe en el sistema con el mismo monto
     ('Costo neto (USD)') y, si es propia, la misma venta neta ('Monto Neto de Venta')."""
     filas = [r for _, r in registros(hojas, "Contratos", 34) if txt(r[0]) and txt(r[1])]
@@ -67,6 +67,8 @@ def contratos(hojas, db, R):
         left join v_costo_proveedor_venta p on p.venta_id = v.id""")}
     difs = []
     for r in filas:
+        if ("contratos", llave(r[0])) in exc:
+            continue
         s = sistema.get(llave(r[0]))
         costo, venta = num(r[13]), num(r[15])
         if s is None:
@@ -168,7 +170,7 @@ def main():
     exc = excepciones(sys.argv[1])
     R = Resultado()
     ventas_por_mes(hojas, db, R)
-    contratos(hojas, db, R)
+    contratos(hojas, db, R, exc)
     cobranza(hojas, db, R, exc)
     cobranza_por_contrato(hojas, db, R, exc)
     renovaciones(hojas, db, R, exc)
