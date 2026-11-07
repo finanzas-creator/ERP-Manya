@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ok, supabase } from '../lib/supabase'
-import { dinero, fecha, mesActual, mesLargo, pct, sumarMeses, usd } from '../lib/formato'
+import { dinero, fecha, mesActual, mesLargo, pct, soles, sumarMeses, usd } from '../lib/formato'
 import { puedeOperar, useRol } from '../lib/sesion'
 import { Barras, Card, Estado, Kpi, Nota, Panel, Renglon, Select, Tabla, Titulo } from '../components/ui'
 import type { Fila } from '../lib/db'
@@ -41,6 +41,11 @@ export default function Resumen() {
   const gp = useKpi('v_kpi_gp_mes', periodo)
   const pauta = useKpi('v_kpi_pauta_mes', periodo)
   const ultimos12 = (meses.data ?? []).filter((x) => x.periodo! > sumarMeses(periodo, -12) && x.periodo! <= periodo)
+  const cobrado = useQuery({
+    queryKey: ['kpi_cobrado_mes', periodo],
+    queryFn: async () => ok(await supabase.from('v_kpi_cobrado_mes').select('*').eq('periodo', periodo)),
+  })
+  const c = sumaCobrado(cobrado.data)
   const k = hoy.data
   const g = gp.data?.[0]
 
@@ -74,23 +79,24 @@ export default function Resumen() {
           detalle={`margen ${pct(m?.margen)}`} tono={(m?.gp_usd ?? 0) < 0 ? 'critical' : undefined} />
         <Kpi label="Facturado en el mes" valor={usd(m?.facturado_usd)} onClick={() => setDetalle('facturado')}
           detalle={`con IGV · ${m?.comprobantes ?? 0} comprobantes`} />
-        <Kpi label="Cobrado en el mes" valor={usd(m?.cobrado_usd)} onClick={() => setDetalle('cobrado')}
-          detalle={`incluye IGV y pauta · ${m?.clientes_activos ?? 0} clientes activos`} />
+        <Kpi label="Ingreso cobrado" valor={soles(c.ingreso_pen)} onClick={() => setDetalle('cobrado')}
+          detalle={`${usd(c.ingreso_usd)} · sin IGV ni pauta, base caja`} />
       </div>
 
       <Card titulo="Cuentas por cobrar · hoy" className="mt-4">
         <div className="grid gap-4 p-4 md:grid-cols-4">
-          <Mirada color="var(--series-1)" titulo="Pendiente según contratos" valor={usd(k?.pendiente_contratos_usd)}
-            texto="todo lo que falta entrar, incluido lo que aún no se factura" onClick={opera ? () => navigate('/ventas') : undefined} />
-          <Mirada color="var(--warning)" titulo="Facturado por cobrar" valor={usd(k?.por_cobrar_usd)}
-            texto={<>comprobantes emitidos sin pagar · <span className="text-critical">{usd(k?.vencido_usd)} vencido</span></>}
+          <Mirada color="var(--series-1)" titulo="Por cobrar (como en el balance)" valor={usd(k?.pendiente_contratos_usd)}
+            texto={<>{soles((k?.pendiente_contratos_usd ?? 0) * (k?.tc_hoy ?? 0))} · {k?.cxc_contratos ?? 0} contratos · incluye {usd(k?.cxc_pauta_usd)} de pauta de clientes</>}
             onClick={opera ? () => navigate('/cobranza') : undefined} />
-          <Mirada color="var(--series-3)" titulo="Cuotas por facturar" valor={usd(k?.por_facturar_usd)}
-            texto="venta comprometida que falta facturar para poder cobrar" />
-          <Mirada color="var(--text-3)" titulo="Ventas sin plan de pagos" valor={usd(k?.falta_planificar_usd)}
-            texto={`${k?.ventas_plan_descuadrado ?? 0} ventas por revisar · neto sin IGV`} onClick={opera ? () => navigate('/revision') : undefined} />
+          <Mirada color="var(--critical)" titulo="Facturado vencido" valor={usd(k?.cxc_vencido_usd)}
+            texto="comprobantes emitidos que ya pasaron su fecha" onClick={opera ? () => navigate('/cobranza') : undefined} />
+          <Mirada color="var(--warning)" titulo="Facturado por vencer" valor={usd(k?.cxc_por_vencer_usd)}
+            texto="comprobantes emitidos que aún están en plazo" onClick={opera ? () => navigate('/facturacion') : undefined} />
+          <Mirada color="var(--series-3)" titulo="Por facturar" valor={usd(k?.cxc_por_facturar_usd)}
+            texto={<>contratos firmados sin comprobante{(k?.ventas_plan_descuadrado ?? 0) > 0 ? <> · {k?.ventas_plan_descuadrado} sin plan de pagos completo</> : null}</>}
+            onClick={opera ? () => navigate('/revision') : undefined} />
         </div>
-        <Nota>Días promedio de cobro (DSO): {k?.dso_dias ?? '—'} · Los 5 mayores clientes son el {pct(k?.concentracion_top5)} de la venta de los últimos 12 meses · Renovaciones: {k?.renovaciones_30d ?? 0} en los próximos 30 días y {k?.renovaciones_vencidas ?? 0} vencidas sin renovar.</Nota>
+        <Nota>Total con IGV de cada contrato firmado menos lo cobrado (R-46), igual que "Pagos pendientes" del sheet · Días promedio de cobro (DSO): {k?.dso_dias ?? '—'} · Los 5 mayores clientes son el {pct(k?.concentracion_top5)} de la venta de los últimos 12 meses · Renovaciones: {k?.renovaciones_30d ?? 0} en los próximos 30 días y {k?.renovaciones_vencidas ?? 0} vencidas sin renovar.</Nota>
       </Card>
 
       <Morosos onCliente={opera ? (id) => navigate(`/clientes/${id}`) : undefined} />
@@ -171,7 +177,7 @@ export default function Resumen() {
       </Card>
       <p className="mt-3 text-xs text-t3">Ventas: por fecha de contrato. Ingresos: por mes de ejecución (proyectos repartidos entre inicio y entrega). La pauta y los influencers no son venta; sus comisiones sí. Clic en una tarjeta para ver cómo se calcula.</p>
 
-      {detalle && <DetalleKpi tipo={detalle} periodo={periodo} m={m} g={g} ventasCategoria={ventasCategoria}
+      {detalle && <DetalleKpi tipo={detalle} periodo={periodo} m={m} g={g} c={c} ventasCategoria={ventasCategoria}
         onCerrar={() => setDetalle(null)} onIr={opera ? (a) => navigate(a) : undefined} />}
     </>
   )
@@ -239,8 +245,8 @@ function Mirada({ color, titulo, valor, texto, onClick }:
 }
 
 /** Cómo se arma cada número del resumen, paso a paso, con los datos de las vistas. */
-function DetalleKpi({ tipo, periodo, m, g, ventasCategoria, onCerrar, onIr }:
-  { tipo: Detalle; periodo: string; m?: Mes; g?: Fila<'v_kpi_gp_mes'>; ventasCategoria: Fila<'v_kpi_ventas_categoria_mes'>[]
+function DetalleKpi({ tipo, periodo, m, g, c, ventasCategoria, onCerrar, onIr }:
+  { tipo: Detalle; periodo: string; m?: Mes; g?: Fila<'v_kpi_gp_mes'>; c?: ReturnType<typeof sumaCobrado>; ventasCategoria: Fila<'v_kpi_ventas_categoria_mes'>[]
     onCerrar: () => void; onIr?: (a: string) => void }) {
   const ingresos = useKpi('v_kpi_ingresos_mes', periodo)
   const lbl = mesLargo(periodo)
@@ -286,9 +292,34 @@ function DetalleKpi({ tipo, periodo, m, g, ventasCategoria, onCerrar, onIr }:
     </Panel>
   )
   return (
-    <Panel subtitulo={`Cobrado · ${lbl}`} titulo={usd(m?.cobrado_usd)} onCerrar={onCerrar}>
-      <p className="text-sm text-t2">Pagos cuya fecha cae en el mes: lo que entró a caja, con IGV, detracciones y pauta. Cada pago se convierte con su propio tipo de cambio (R-30).</p>
+    <Panel subtitulo={`Ingreso cobrado · ${lbl}`} titulo={soles(c?.ingreso_pen)} onCerrar={onCerrar}>
+      <p className="mb-3 text-sm text-t2">Lo que entró al banco en el mes por servicios de Manya, sin IGV y sin la pauta de los clientes: es el "ingreso" del Cash Summary (R-45). Pagos en soles por su monto; en dólares, con el TC del mes.</p>
+      <Renglon total label="Ingreso cobrado" valor={<>{soles(c?.ingreso_pen)} <span className="text-xs font-normal text-t3">{usd(c?.ingreso_usd)}</span></>} />
+      <div className="mt-2 text-xs font-medium tracking-wide text-t3 uppercase">Por empresa</div>
+      <Renglon sangria label="Templates Art SAC" valor={soles(c?.templates_pen)} />
+      <Renglon sangria label="Manya Media EIRL" valor={soles(c?.manya_media_pen)} />
+      <div className="mt-2 text-xs font-medium tracking-wide text-t3 uppercase">Por tipo de servicio</div>
+      <Renglon sangria label="Planes mensuales (manejo de cuentas)" valor={soles(c?.ingreso_mensual_pen)} />
+      <Renglon sangria label="Proyectos" valor={soles(c?.ingreso_proyecto_pen)} />
+      <div className="mt-2 text-xs font-medium tracking-wide text-t3 uppercase">Hasta lo que entró al banco</div>
+      <Renglon label="Ingreso cobrado" valor={soles(c?.ingreso_pen)} />
+      <Renglon sangria label="+ IGV de esos cobros" valor={soles(c?.igv_pen)} />
+      <Renglon sangria label="+ Pauta de clientes (con IGV)" valor={soles(c?.pauta_pen)} />
+      <Renglon total label="Cobrado total (todo lo que entró)" valor={<>{soles(c?.cobrado_pen)} <span className="text-xs font-normal text-t3">{usd(c?.cobrado_usd)}</span></>} />
+      <Renglon label="de lo cual detracciones (Banco de la Nación)" valor={soles(c?.detraccion_pen)} />
       {ir('/cobranza', 'Ver la cartera por cobrar')}
     </Panel>
   )
+}
+
+/** Suma por empresa las filas de v_kpi_cobrado_mes de un mes (R-45). */
+function sumaCobrado(filas: Fila<'v_kpi_cobrado_mes'>[] | undefined) {
+  const t = (f: (x: Fila<'v_kpi_cobrado_mes'>) => number | null) => (filas ?? []).reduce((s, x) => s + (f(x) ?? 0), 0)
+  return {
+    ingreso_pen: t((x) => x.ingreso_pen), ingreso_usd: t((x) => x.ingreso_usd),
+    ingreso_mensual_pen: t((x) => x.ingreso_mensual_pen), ingreso_proyecto_pen: t((x) => x.ingreso_proyecto_pen),
+    igv_pen: t((x) => x.igv_pen), pauta_pen: t((x) => x.pauta_pen), detraccion_pen: t((x) => x.detraccion_pen),
+    cobrado_pen: t((x) => x.cobrado_pen), cobrado_usd: t((x) => x.cobrado_usd),
+    templates_pen: t((x) => (x.empresa_id === 1 ? x.ingreso_pen : 0)), manya_media_pen: t((x) => (x.empresa_id === 2 ? x.ingreso_pen : 0)),
+  }
 }

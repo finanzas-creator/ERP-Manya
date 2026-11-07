@@ -5,7 +5,7 @@ import { dinero, fecha, hoyISO } from '../lib/formato'
 import { useCuentas } from '../lib/catalogos'
 import { Boton, Campo, Input, MensajeError, Modal, Select, Tabla } from './ui'
 
-/** Pagos y devoluciones agrupados por operación bancaria (R-40, R-41). Se anula la operación entera. */
+/** Pagos y devoluciones agrupados por operación bancaria (R-43, R-44). Se anula la operación entera. */
 export function Operaciones({ ventaId, cuotaIds, compacta }: { ventaId?: string; cuotaIds?: string[]; compacta?: boolean }) {
   const [anular, setAnular] = useState<string | null>(null)
   const { data } = useQuery({
@@ -55,7 +55,7 @@ function AnularOperacion({ operacion, onCerrar }: { operacion: string; onCerrar:
   )
 }
 
-/** R-41: devolver dinero al cliente de una factura (sale de una cuenta de la empresa emisora). */
+/** R-44: devolver dinero al cliente de una factura (sale de una cuenta de la empresa emisora). */
 export function DevolucionModal({ comprobanteId, empresaId, descripcion, onCerrar }:
   { comprobanteId: string; empresaId?: number | null; descripcion: string; onCerrar: () => void }) {
   const qc = useQueryClient()
@@ -76,7 +76,7 @@ export function DevolucionModal({ comprobanteId, empresaId, descripcion, onCerra
   })
   return (
     <Modal titulo={`Devolver dinero · ${descripcion}`} onCerrar={onCerrar}>
-      <p className="mb-3 text-sm text-t2">Dinero que la empresa devuelve al cliente (por ejemplo, tras una nota de crédito). Baja lo cobrado y, si corresponde, vuelve a abrir el saldo (R-41).</p>
+      <p className="mb-3 text-sm text-t2">Dinero que la empresa devuelve al cliente (por ejemplo, tras una nota de crédito). Baja lo cobrado y, si corresponde, vuelve a abrir el saldo (R-44).</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Campo label="Fecha"><Input type="date" value={f.fecha} onChange={(e) => setF({ ...f, fecha: e.target.value })} /></Campo>
         <Campo label="Sale de la cuenta">

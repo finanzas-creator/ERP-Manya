@@ -99,7 +99,7 @@ begin
   assert (select comprobante_id from v_cuota where id = '00000000-0000-0000-0000-0000000000b1') = nuevo, 'R-21 se vuelve a facturar';
 end $$;
 
--- R-40/R-41: operaciones y devoluciones
+-- R-43/R-44: operaciones y devoluciones
 insert into plantilla_pago (nombre) values ('100% prueba');
 insert into plantilla_pago_item values ((select max(id) from plantilla_pago), 1, '100%', 1, 'inicio');
 do $$
@@ -109,18 +109,18 @@ begin
                          p_fecha_contrato => '2026-06-01', p_monto_neto => 1000, p_plantilla => (select max(id) from plantilla_pago));
   cid := emitir_comprobante(1::smallint, 'factura', 'E001-500', '2026-06-02', array(select id from cuota where venta_id = vid));
   perform registrar_pago_comprobante(cid, '2026-06-05', 1::smallint, 1180, 1, 'OP-123');
-  assert (select count(*) from v_operacion_pago where numero_operacion = 'OP-123') = 1, 'R-40 una sola operación';
+  assert (select count(*) from v_operacion_pago where numero_operacion = 'OP-123') = 1, 'R-43 una sola operación';
   -- devolución parcial: baja lo cobrado y reabre saldo
   antes := (select sum(monto_usd) from v_pago where venta_id = vid);
   perform registrar_devolucion(cid, '2026-06-20', 1::smallint, 180, 1, 'Descuento devuelto');
-  assert (select sum(monto_usd) from v_pago where venta_id = vid) = antes - 180, 'R-41 cobrado neto';
-  assert (select saldo from v_comprobante where id = cid) = 180, 'R-41 saldo reabierto';
+  assert (select sum(monto_usd) from v_pago where venta_id = vid) = antes - 180, 'R-44 cobrado neto';
+  assert (select saldo from v_comprobante where id = cid) = 180, 'R-44 saldo reabierto';
   begin
     perform registrar_devolucion(cid, '2026-06-21', 1::smallint, 5000, 1, 'excesiva');
     raise exception 'debió rechazar';
-  exception when others then assert sqlerrm like 'R-41%', sqlerrm;
+  exception when others then assert sqlerrm like 'R-44%', sqlerrm;
   end;
   -- anular la operación del pago anula todas sus cuotas
   perform anular_operacion((select operacion from pago where numero_operacion = 'OP-123' limit 1), 'error');
-  assert not exists (select 1 from v_pago where numero_operacion = 'OP-123'), 'R-40 operación anulada completa';
+  assert not exists (select 1 from v_pago where numero_operacion = 'OP-123'), 'R-43 operación anulada completa';
 end $$;

@@ -1,11 +1,14 @@
 const usdFmt = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 const usd2Fmt = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
 const penFmt = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 2 })
+const penEntFmt = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', maximumFractionDigits: 0 })
 const enteroFmt = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 0 })
 const pctFmt = new Intl.NumberFormat('es-PE', { style: 'percent', maximumFractionDigits: 1 })
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic']
 
 export const usd = (v: number | null | undefined) => usdFmt.format(v ?? 0)
+/** Soles sin decimales, para indicadores. */
+export const soles = (v: number | null | undefined) => penEntFmt.format(v ?? 0)
 export const usd2 = (v: number | null | undefined) => usd2Fmt.format(v ?? 0)
 export const dinero = (v: number | null | undefined, moneda: string | null | undefined) =>
   moneda === 'PEN' ? penFmt.format(v ?? 0) : usd2Fmt.format(v ?? 0)

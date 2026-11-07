@@ -7,6 +7,7 @@ Las diferencias conocidas y explicadas viven en data/excepciones.csv (con motivo
 cualquier diferencia nueva hace fallar la prueba.
 """
 import collections
+import datetime as dt
 import csv
 import os
 import subprocess
@@ -118,6 +119,19 @@ def cobranza_por_contrato(hojas, db, R, exc):
     R.check("Ventas con saldo que el sheet no tiene por cobrar", "R-33", difs, len(sistema))
 
 
+def cuentas_por_cobrar(hojas, db, R, exc):
+    """R-46: cuentas por cobrar por contrato firmado hasta hoy = 'Pagos pendientes' de los contratos
+    'Por Cobrar' del sheet (incluye lo no facturado y la pauta)."""
+    hoy = dt.date.today()
+    oficial = {llave(r[0]): num(r[22]) or 0.0 for _, r in registros(hojas, "Contratos", 34)
+               if txt(r[1]) and r[23] == "Por Cobrar" and fecha(r[2]) and fecha(r[2]) <= hoy}
+    sistema = {llave(k): float(v) for k, v in query(db, "select x.codigo_legacy, v.por_cobrar_usd from v_cxc_venta v join venta x on x.id = v.venta_id")}
+    claves = set(oficial) | set(sistema)
+    difs = [(k, round(oficial.get(k, 0.0), 2), round(sistema.get(k, 0.0), 2)) for k in sorted(claves)
+            if abs(oficial.get(k, 0.0) - sistema.get(k, 0.0)) > 5 and ("contratos", k) not in exc]
+    R.check("Cuentas por cobrar por contrato (Pagos pendientes)", "R-46", difs, len(claves))
+
+
 def renovaciones(hojas, db, R, exc):
     """R-50/D-22: pestaña 'Estado de renovaciones' = todos los servicios mensuales activos con su
     vencimiento (también los ya vencidos). Un código del sheet compartido por varios clientes se
@@ -173,6 +187,7 @@ def main():
     contratos(hojas, db, R, exc)
     cobranza(hojas, db, R, exc)
     cobranza_por_contrato(hojas, db, R, exc)
+    cuentas_por_cobrar(hojas, db, R, exc)
     renovaciones(hojas, db, R, exc)
     consumo_pauta(hojas, db, R)
     costos(hojas, db, R)
