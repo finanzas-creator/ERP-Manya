@@ -268,3 +268,21 @@ begin
   exception when others then assert sqlerrm like 'R-125%', sqlerrm; end;
 end $$;
 reset role;
+
+-- R-120: cese antes del 15 de mayo → la CTS nov–abr se paga en la liquidación; R-113: fijos no afectos no se proyectan
+insert into trabajador (id, empleador_id, numero_documento, apellidos_nombres, fecha_ingreso, fecha_cese, motivo_cese, sistema_pension)
+values ('00000000-0000-0000-0000-0000000001a8', (select id from empleador where ruc = '20000000001'), '10000008', 'HUGO (cese en mayo)',
+        '2025-06-01', '2026-05-10', 'RENUNCIA', 'onp');
+insert into remuneracion (trabajador_id, vigente_desde, sueldo_basico) values ('00000000-0000-0000-0000-0000000001a8', '2025-06-01', 3000);
+insert into concepto_fijo (trabajador_id, concepto, monto, desde) values ('00000000-0000-0000-0000-0000000001a1', 'MOVILIDAD', 300, '2026-01-01');
+do $$
+declare v numeric;
+begin
+  -- nov-25–abr-26 completo: (3000 + 1500/6) / 30 × 7.5 = 812.50; trunca may 1–10: 3000/30 × 15×10/360 = 41.67
+  assert (select monto from v_liquidacion_linea where trabajador_id = '00000000-0000-0000-0000-0000000001a8' and concepto = 'CTS_PENDIENTE') = 812.50, 'R-120 CTS no depositada';
+  assert (select monto from v_liquidacion_linea where trabajador_id = '00000000-0000-0000-0000-0000000001a8' and concepto = 'CTS') = 41.67, 'R-120 CTS trunca de mayo';
+  -- la movilidad (no afecta a quinta) no cambia la retención de ANA
+  select retencion into v from v_pl_quinta where trabajador_id = '00000000-0000-0000-0000-0000000001a1' and periodo = '2026-01-01';
+  assert v = 5.13, format('R-113 movilidad no se proyecta: %s', v);
+  assert (select monto from v_boleta_linea where trabajador_id = '00000000-0000-0000-0000-0000000001a1' and periodo = '2026-01-01' and concepto = 'MOVILIDAD') = 300, 'R-105 fijo pagado';
+end $$;

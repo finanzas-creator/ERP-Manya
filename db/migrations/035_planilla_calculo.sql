@@ -97,7 +97,7 @@ begin
 end
 $$;
 
--- Conceptos fijos del mes de la fecha: todos, o solo los computables para beneficios (R-115).
+-- Conceptos fijos del mes de la fecha: los computables para beneficios (R-115) o los afectos a quinta (R-113).
 create function fijos_en(p_t uuid, f date, p_solo_computables boolean)
 returns numeric
 language plpgsql stable as $$
@@ -108,7 +108,7 @@ begin
   from concepto_fijo cf join concepto_planilla c on c.codigo = cf.concepto
   where cf.trabajador_id = p_t and cf.anulado_en is null
     and cf.desde <= date_trunc('month', f) and (cf.hasta is null or cf.hasta >= date_trunc('month', f))
-    and (not p_solo_computables or c.computable)
+    and case when p_solo_computables then c.computable else c.afecto_quinta end
   );
 end
 $$;
@@ -799,6 +799,9 @@ ingresos as (
   select c.trabajador_id, x.concepto, x.cantidad, x.monto
   from ces c
   left join lateral (select * from cts_semestre(c.trabajador_id, semestre_cts(c.fecha_cese)) where tipo = 'trunca') ct on true
+  -- cese antes del plazo de depósito (15 de mayo / noviembre): la CTS del semestre anterior se paga aquí
+  left join lateral (select * from cts_semestre(c.trabajador_id, (semestre_cts(c.fecha_cese) - interval '6 months')::date)
+                     where tipo = 'deposito' and c.fecha_cese < deposito_mes + 14) cp on true
   left join lateral (select * from grati_semestre(c.trabajador_id, semestre_grati(c.fecha_cese)) where tipo = 'trunca') g on true
   join v_vacaciones v on v.trabajador_id = c.trabajador_id
   join regimen_derecho rd on rd.regimen = c.regimen
@@ -806,6 +809,7 @@ ingresos as (
   cross join lateral (select age(c.fecha_cese + 1, c.fecha_ingreso) as servicio,
                              (extract(year from age(c.fecha_cese + 1, c.fecha_ingreso)) * 12 + extract(month from age(c.fecha_cese + 1, c.fecha_ingreso)))::int as meses_servicio) sv
   cross join lateral (values
+    ('CTS_PENDIENTE', cp.dias::numeric, cp.monto),
     ('CTS', ct.dias::numeric, ct.monto),
     ('GRATI_TRUNCA', g.meses::numeric, g.monto),
     ('BONIF_TRUNCA', null, g.bonificacion),

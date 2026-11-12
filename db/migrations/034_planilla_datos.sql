@@ -207,6 +207,7 @@ insert into concepto_planilla (codigo, nombre, tipo, plame, afecto_essalud, afec
   -- aportes del empleador
   ('ESSALUD',         'EsSalud (aporte del empleador)',              'aporte',  '0804', false, false, false, false, false, false, false, false, false, 200),
   -- liquidación (R-120)
+  ('CTS_PENDIENTE',   'CTS del semestre anterior (no depositada)',   'ingreso', '0904', false, false, false, false, false, false, false, false, true, 299),
   ('CTS',             'CTS trunca',                                  'ingreso', '0904', false, false, false, false, false, false, false, false, true, 300),
   ('GRATI_TRUNCA',    'Gratificación trunca',                        'ingreso', '0407', false, false, true,  false, false, false, false, false, true, 301),
   ('BONIF_TRUNCA',    'Bonificación extraordinaria trunca (Ley 30334)', 'ingreso', '0313', false, false, true, false, false, false, false, false, true, 302),

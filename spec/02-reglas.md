@@ -178,7 +178,9 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   vacaciones truncas − días adelantados (el adelanto solo se compensa con las truncas; lo que no
   alcanza no se le descuenta) + indemnización vacacional (vencidas) + indemnización por despido
   (R-121) − pensión sobre las vacaciones − regularización de quinta − descuentos autorizados. La
-  remuneración de los días del mes de cese va en la planilla de ese mes. Plazo de pago: 48 horas.
+  remuneración de los días del mes de cese va en la planilla de ese mes. Si el cese ocurre antes del
+  plazo de depósito de la CTS del semestre anterior (15 de mayo / 15 de noviembre), esa CTS se paga en
+  la liquidación (si ya se depositó, se registra como descuento autorizado). Plazo de pago: 48 horas.
 - **R-121** **Indemnización por despido**: solo si el motivo de cese indemniza *(catálogo
   `motivo_cese`)* y pasó el periodo de prueba. Base: remuneración computable sin el sexto de
   gratificación. MYPE: días del régimen por año, con fracción por meses completos (dozavos), con
