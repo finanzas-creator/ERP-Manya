@@ -52,6 +52,19 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Dashboard: ventas, ingresos, recurrente, facturado, cobrado, GP, margen, cartera en dos miradas, ventas por categoría, top clientes, estructura de costos; cada tarjeta muestra cómo se calcula
 - ✅ Cobros esperados 13 semanas (Cobranza), DSO y concentración top 5 (Resumen) · ✅ retención de clientes y clientes caídos (R-53, R-54) · ✅ evolución de ventas desde 2021 · ⬜ proyección que incluya renovaciones aún no registradas
 
+## R5 · Planillas (HoldingD y entidades MYPE)
+- ✅ Spec R-100…R-125 · ✅ empleadores con REMYPE y régimen por trabajador
+- ✅ Planilla del mes: sueldo, asignación familiar, vacaciones, horas extra 25/35, feriados, faltas, tardanzas, bonos, adelantos
+- ✅ AFP/ONP/EsSalud con tasas SBS del periodo (automático mensual + manual) · ✅ quinta con proyección SUNAT
+- ✅ Gratificación y bonificación (julio/diciembre), CTS (mayo/noviembre), provisiones por devengado, vacaciones con adelantos y vencidas
+- ✅ Liquidación con CTS/grati/vacaciones truncas e indemnización por régimen y causal
+- ✅ Cierre con boletas emitidas e imprimibles
+- ⬜ Integración con el ERP de control de personal (trabajadores, asistencia, horas extra) por código externo
+- ⬜ Archivos PLAME / AFPnet / T-Registro y pago masivo al banco
+- ⬜ Enviar el costo empresa de la planilla a "Planilla y gastos" (GP)
+- ⬜ Constancia de depósito CTS imprimible; préstamos con cronograma de cuotas
+- ⬜ Validar con el contador D-28, D-29, D-30 y cargar REMYPE, saldos de vacaciones y quinta previa reales
+
 ## Después
 - ⬜ Integración SUNAT API SIRE (RVIE): importar comprobantes emitidos de ambas empresas
 - ⬜ Reclasificación del catálogo a la taxonomía BD_MAD
