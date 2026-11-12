@@ -286,3 +286,18 @@ begin
   assert v = 5.13, format('R-113 movilidad no se proyecta: %s', v);
   assert (select monto from v_boleta_linea where trabajador_id = '00000000-0000-0000-0000-0000000001a1' and periodo = '2026-01-01' and concepto = 'MOVILIDAD') = 300, 'R-105 fijo pagado';
 end $$;
+
+-- R-124: rentas de quinta previas
+do $$
+begin
+  -- Hugo ingresó en 2025 y la planilla empieza en 2026-01: no hay meses previos del año → sin observación en 2026
+  assert not exists (select 1 from v_pl_observacion where trabajador_id = '00000000-0000-0000-0000-0000000001a8' and codigo = 'QUINTA_PREVIA'), 'R-124 año completo en el sistema';
+end $$;
+update empleador set inicio_planilla = '2026-03-01' where ruc = '20000000002';
+do $$
+begin
+  assert exists (select 1 from v_pl_observacion where trabajador_id = '00000000-0000-0000-0000-0000000001a6' and periodo = '2026-03-01'
+                 and codigo = 'QUINTA_PREVIA' and bloquea), 'R-124 faltan ene–feb: bloquea';
+  insert into quinta_previa (trabajador_id, anio, renta_bruta, retencion) values ('00000000-0000-0000-0000-0000000001a6', 2026, 2260, 0);
+  assert not exists (select 1 from v_pl_observacion where trabajador_id = '00000000-0000-0000-0000-0000000001a6' and codigo = 'QUINTA_PREVIA'), 'R-124 registrada';
+end $$;

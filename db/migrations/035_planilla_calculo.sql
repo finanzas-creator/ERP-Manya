@@ -955,6 +955,16 @@ from (
   where t.fecha_ingreso < e.inicio_planilla and m.periodo = e.inicio_planilla
     and not exists (select 1 from saldo_vacaciones_inicial s where s.trabajador_id = t.id)
   union all
+  -- R-113: sin los ingresos del año anteriores al sistema (o de otro empleador) la quinta sale corta
+  select m.empleador_id, m.periodo, m.trabajador_id, 'QUINTA_PREVIA',
+         case when t.fecha_ingreso < e.inicio_planilla
+              then 'Faltan sus rentas y retenciones de quinta de ' || extract(year from m.periodo) || ' anteriores al sistema (certificado o planillas previas).'
+              else 'Ingresó en el año: registra sus rentas y retenciones de otros empleadores (cero si no tuvo).' end,
+         t.fecha_ingreso < e.inicio_planilla
+  from v_pl_mes m join trabajador t on t.id = m.trabajador_id join empleador e on e.id = m.empleador_id
+  where greatest(t.fecha_ingreso, e.inicio_planilla) > date_trunc('year', m.periodo)::date
+    and not exists (select 1 from quinta_previa q where q.trabajador_id = t.id and q.anio = extract(year from m.periodo) and q.anulado_en is null)
+  union all
   select m.empleador_id, m.periodo, m.trabajador_id, 'VACACIONES_VENCIDAS',
          trim_scale(v.dias_vencidos) || ' días de vacaciones vencidos sin gozar: generan indemnización vacacional.', false
   from v_pl_mes m join v_vacaciones v on v.trabajador_id = m.trabajador_id

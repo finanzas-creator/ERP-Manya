@@ -196,7 +196,9 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   bloquean (tasas provisionales, CUSPP faltante, trabajador sin sueldo). Reabrir (solo
   administrador) anula las boletas con motivo. La entrega de la boleta se registra aparte.
 - **R-124** **Observaciones**: la planilla lista lo que falta revisar (tasas, CUSPP, sueldo menor a
-  la RMV, descanso médico que supera 20 días en el año, REMYPE no registrado…). Una boleta emitida
+  la RMV, descanso médico que supera 20 días en el año, REMYPE no registrado, rentas de quinta
+  previas faltantes…). Quien ya trabajaba en el año antes de usar el sistema no se cierra sin sus
+  rentas y retenciones previas (sin ellas la quinta sale corta). Una boleta emitida
   que ya no coincide con el recálculo se marca para revisión.
 - **R-125** Planillas lo ven y operan el administrador y tesorería (sueldos son reservados: el CEO
   no los ve). Los parámetros legales y tasas los edita el administrador.
