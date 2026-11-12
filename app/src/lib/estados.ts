@@ -27,6 +27,17 @@ export const ESTADOS: Record<string, { label: string; tono: Tono }> = {
   compromiso_incumplido: { label: 'Compromiso incumplido', tono: 'critical' },
   seguimiento_atrasado: { label: 'Seguimiento atrasado', tono: 'warning' },
   en_gestion: { label: 'En gestión', tono: 'good' },
+  // planillas (R-100, R-116, R-117, R-123)
+  general: { label: 'Régimen general', tono: 'info' },
+  pequena: { label: 'Pequeña empresa', tono: 'info' },
+  micro: { label: 'Microempresa', tono: 'info' },
+  cesado: { label: 'Cesado', tono: 'neutral' },
+  regular: { label: 'Regular', tono: 'good' },
+  trunca: { label: 'Trunca', tono: 'warning' },
+  deposito: { label: 'Depósito', tono: 'good' },
+  abierta: { label: 'Abierta', tono: 'warning' },
+  cerrada: { label: 'Cerrada', tono: 'good' },
+  provisional: { label: 'Tasas provisionales', tono: 'critical' },
   // antigüedad (v_cobranza)
   al_dia: { label: 'Al día', tono: 'good' },
   '1-30': { label: '1–30 días', tono: 'warning' },

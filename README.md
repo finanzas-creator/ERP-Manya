@@ -5,9 +5,11 @@ cobranza, renovaciones, comisiones, costos (planilla, herramientas, proveedores,
 rentabilidad. En producción: https://manya-erp.pages.dev
 
 Pantallas: Resumen · Clientes · Ventas · Cobranza (con cobros esperados) · Renovaciones · Pauta ·
-Estado de resultados · Rentabilidad · Planilla y gastos · Revisión de datos · Validación contra el
-sheet · Configuración (tipo de cambio, cierre mensual, parámetros, pesos de Dirección). El CEO ve
-Resumen y Estado de resultados.
+Estado de resultados · Rentabilidad · Planilla y gastos · **Planillas** (cálculo de planilla por
+empleador: boletas, AFP/ONP con tasas SBS del periodo, quinta, gratificación, CTS, provisiones,
+vacaciones y liquidaciones; reglas R-100…R-125) · Revisión de datos · Validación contra el sheet ·
+Configuración (tipo de cambio, cierre mensual, parámetros, pesos de Dirección). El CEO ve Resumen y
+Estado de resultados (no ve sueldos).
 
 - **Qué hace y por qué:** [`spec/`](spec/README.md). Es la fuente de verdad del negocio.
 - **Reglas para quien programe (personas o IA):** [`CLAUDE.md`](CLAUDE.md).
@@ -21,6 +23,7 @@ make db                      # crea la base y aplica migraciones + usuarios de p
 cp <sheet>.xlsx data/sheet.xlsx
 make migrate-data            # migra el sheet (reporte en etl/out/anomalias.md)
 make test                    # pruebas de reglas + pruebas doradas contra el sheet
+make demo-planilla           # opcional: empleador y trabajadores ficticios para ver Planillas
 make api                     # API local (PostgREST) en :3001
 cd app && npm install && cp .env.example .env.local && npm run dev   # interfaz en :5173
 ```

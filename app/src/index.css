@@ -75,3 +75,12 @@ body {
 }
 
 .num { font-variant-numeric: tabular-nums; }
+
+/* Impresión de boletas y liquidaciones: solo se imprime la zona marcada, en blanco y negro. */
+@media print {
+  body * { visibility: hidden; }
+  .zona-impresion, .zona-impresion * { visibility: visible; }
+  .zona-impresion { position: absolute; inset: 0; background: #fff; color: #000; }
+  .zona-impresion .no-imprimir { display: none !important; }
+  .salto-pagina { break-after: page; }
+}

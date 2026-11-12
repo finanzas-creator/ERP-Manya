@@ -25,6 +25,7 @@ const Costos = lazy(() => import('./pages/Costos'))
 const Revision = lazy(() => import('./pages/Revision'))
 const Configuracion = lazy(() => import('./pages/Configuracion'))
 const Validacion = lazy(() => import('./pages/Validacion'))
+const Planillas = lazy(() => import('./pages/Planillas'))
 
 type Acceso = 'todos' | 'opera' | 'admin'
 const NAV: { grupo: string; items: { a: string; label: string; icono: NombreIcono; acceso: Acceso }[] }[] = [
@@ -43,6 +44,9 @@ const NAV: { grupo: string; items: { a: string; label: string; icono: NombreIcon
   ] },
   { grupo: 'Costos', items: [
     { a: '/costos', label: 'Planilla y gastos', icono: 'costos', acceso: 'opera' },
+  ] },
+  { grupo: 'Personas', items: [
+    { a: '/planillas', label: 'Planillas', icono: 'planillas', acceso: 'opera' },
   ] },
   { grupo: 'Sistema', items: [
     { a: '/revision', label: 'Revisión de datos', icono: 'revision', acceso: 'opera' },
@@ -117,6 +121,7 @@ export default function App() {
                 <Route path="/pauta" element={<Pauta />} />
                 <Route path="/rentabilidad" element={<Rentabilidad />} />
                 <Route path="/costos" element={<Costos />} />
+                <Route path="/planillas" element={<Planillas />} />
                 <Route path="/revision" element={<Revision />} />
                 <Route path="/validacion" element={<Validacion />} />
               </>}

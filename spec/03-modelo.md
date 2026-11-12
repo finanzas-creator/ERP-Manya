@@ -92,6 +92,7 @@ CONTROL
 | `v_vacacion_periodo` · `v_vacaciones` | Periodos ganados, gozados, pendientes, vencidos, adelantos y truncas | R-119 |
 | `v_liquidacion_linea` · `v_liquidacion` | Liquidación de beneficios de cada cese | R-120–R-122 |
 | `v_pl_observacion` | Lo que falta revisar antes de cerrar | R-102, R-124 |
+| `v_ausencia` · `v_asistencia_dia` · `v_movimiento` · `v_concepto_fijo` | Novedades con nombres, para las pantallas (sin cálculo) | R-104 |
 
 ## Equivalencias con el sheet
 

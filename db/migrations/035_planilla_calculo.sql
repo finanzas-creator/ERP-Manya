@@ -527,7 +527,7 @@ from (
     and cf.desde <= m.periodo and (cf.hasta is null or cf.hasta >= m.periodo)
   union all
   -- montos registrados del mes (los de la liquidación van en la liquidación)
-  select mv.trabajador_id, mv.periodo, mv.concepto, null, sum(mv.monto)
+  select mv.trabajador_id, mv.periodo, mv.concepto, null, round(sum(mv.monto), 2)
   from movimiento mv
   join concepto_planilla cm on cm.codigo = mv.concepto and not cm.liquidacion
   join v_pl_mes m on m.trabajador_id = mv.trabajador_id and m.periodo = mv.periodo
@@ -825,7 +825,7 @@ ingresos as (
                                                          + extract(day from sv.servicio) / 360.0)), 2) end)
   ) as x(concepto, cantidad, monto)
   union all
-  select mv.trabajador_id, mv.concepto, null, sum(mv.monto)
+  select mv.trabajador_id, mv.concepto, null, round(sum(mv.monto), 2)
   from movimiento mv join concepto_planilla cp on cp.codigo = mv.concepto and cp.liquidacion
   join ces c on c.trabajador_id = mv.trabajador_id and mv.periodo = date_trunc('month', c.fecha_cese)
   where mv.anulado_en is null
@@ -883,7 +883,9 @@ where l.monto > 0;
 create view v_liquidacion with (security_invoker = true) as
 select t.id as trabajador_id, t.empleador_id, t.apellidos_nombres, t.tipo_documento, t.numero_documento, t.cargo,
        t.fecha_ingreso, t.fecha_cese, mc.nombre as motivo_cese, regimen_en(t.id, t.fecha_cese) as regimen,
-       age(t.fecha_cese + 1, t.fecha_ingreso)::text as tiempo_servicio,
+       extract(year from age(t.fecha_cese + 1, t.fecha_ingreso))::int as servicio_anios,
+       extract(month from age(t.fecha_cese + 1, t.fecha_ingreso))::int as servicio_meses,
+       extract(day from age(t.fecha_cese + 1, t.fecha_ingreso))::int as servicio_dias,
        remuneracion_computable(t.id, t.fecha_cese, (date_trunc('month', t.fecha_cese) - interval '1 month')::date) as computable,
        coalesce(s.ingresos, 0) as ingresos, coalesce(s.descuentos, 0) as descuentos,
        coalesce(s.ingresos, 0) - coalesce(s.descuentos, 0) as neto, coalesce(s.essalud, 0) as essalud,
@@ -950,7 +952,7 @@ from (
     and not exists (select 1 from saldo_vacaciones_inicial s where s.trabajador_id = t.id)
   union all
   select m.empleador_id, m.periodo, m.trabajador_id, 'VACACIONES_VENCIDAS',
-         v.dias_vencidos || ' días de vacaciones vencidos sin gozar: generan indemnización vacacional.', false
+         trim_scale(v.dias_vencidos) || ' días de vacaciones vencidos sin gozar: generan indemnización vacacional.', false
   from v_pl_mes m join v_vacaciones v on v.trabajador_id = m.trabajador_id
   where v.dias_vencidos > 0 and m.periodo = date_trunc('month', least(v.corte, current_date))
 ) o
