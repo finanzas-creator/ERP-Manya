@@ -88,6 +88,8 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   humana, p. ej. derechos del régimen general por contrato); si no, la categoría REMYPE del
   empleador (*micro* o *pequeña*) vigente en esa fecha, **solo si el trabajador ingresó después de
   la inscripción**; si no, *general*. Quien ingresó antes del REMYPE conserva el régimen general.
+  Las renovaciones o cambios de categoría sin interrupción cuentan desde la primera inscripción de la
+  cadena. Un reingreso es un registro nuevo del trabajador (otra fecha de ingreso).
 - **R-101** Derechos por régimen *(catálogo `regimen_derecho`)*: gratificación (general 1 sueldo,
   pequeña ½, micro 0 por semestre), CTS (general 30 remuneraciones diarias por año, pequeña 15 con
   tope de 90 acumuladas, micro 0), vacaciones (general 30 días, MYPE 15) e indemnización por
@@ -102,12 +104,13 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
 ### Planilla del mes
 - **R-103** **Días del mes**: un mes completo de vínculo son 30 días; un mes parcial (ingreso o
   cese) cuenta sus días calendario, con tope 30. Una ausencia que cubre todo el vínculo del mes
-  cuenta todos sus días.
+  cuenta todos sus días, aunque sean varias ausencias seguidas.
 - **R-104** **Ausencias** *(catálogo `tipo_ausencia`)*: cada tipo dice con qué concepto se pagan
   sus días (ninguno = no se pagan: falta injustificada, licencia sin goce, suspensión; sueldo:
   licencia con goce, descanso médico a cargo del empleador; remuneración vacacional; subsidio de
   EsSalud) y si cuentan para CTS, gratificación y récord vacacional.
-- **R-105** **Sueldo del mes** = sueldo básico vigente / 30 × días pagados como sueldo. La
+- **R-105** **Sueldo del mes** = sueldo básico / 30 × días pagados como sueldo; si el sueldo cambia a
+  mitad de mes, se pondera por los días de cada uno (base 30). La
   **asignación familiar** (10% de la RMV) se paga completa si el trabajador la tiene registrada; en
   MYPE no es obligatoria: se registra solo si corresponde o se pactó. Los conceptos fijos
   (bonos, movilidad) se pagan en proporción a los días no descontados.
@@ -159,7 +162,7 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   remuneración computable / 30 × días de CTS ganados; días ganados = días por año del régimen ×
   días computables del semestre / 360 (con el tope acumulado de la pequeña empresa). Requiere un
   mes de servicio (los días de quien no lo cumplía pasan al semestre siguiente) y jornada de al menos
-  4 horas. Inafecta a todo.
+  4 horas *(parámetro `jornada_minima_horas`)*. Inafecta a todo.
 - **R-118** **Provisiones mensuales**: la provisión de gratificación, bonificación y CTS de un mes
   es lo **devengado** al cierre del mes menos lo devengado al cierre del mes anterior. En el mes de
   pago (o de cese) lo devengado es lo pagado: la suma de las provisiones del semestre **es** el
@@ -170,7 +173,8 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   más de lo ganado, la diferencia es **adelanto de vacaciones**. Un periodo sin gozar al terminar
   su año siguiente queda **vencido** (indemnización vacacional = una remuneración por esos días).
   **Truncas**: días del régimen × días del año en curso / 360, con al menos un mes de servicio.
-  El saldo de vacaciones al empezar a usar el sistema se registra una vez por trabajador.
+  El saldo de vacaciones al empezar a usar el sistema se registra una vez por trabajador (sin él no
+  se cierra la planilla). Con jornada menor a la mínima (4 horas) no hay vacaciones de este régimen.
 
 ### Cese y liquidación
 - **R-120** **Liquidación** de un trabajador cesado = CTS trunca (desde el inicio del semestre) +
@@ -182,7 +186,7 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   plazo de depósito de la CTS del semestre anterior (15 de mayo / 15 de noviembre), esa CTS se paga en
   la liquidación (si ya se depositó, se registra como descuento autorizado). Plazo de pago: 48 horas.
 - **R-121** **Indemnización por despido**: solo si el motivo de cese indemniza *(catálogo
-  `motivo_cese`)* y pasó el periodo de prueba. Base: remuneración computable sin el sexto de
+  `motivo_cese`)*, pasó el periodo de prueba y la jornada es de al menos 4 horas. Base: remuneración computable sin el sexto de
   gratificación. MYPE: días del régimen por año, con fracción por meses completos (dozavos), con
   tope. General: 1.5 sueldos por año (fracción por meses y días) con tope 12; si el contrato era a
   plazo fijo, 1.5 sueldos por mes que faltaba, con el mismo tope.
@@ -193,7 +197,8 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
 ### Cierre y boletas
 - **R-123** **Cerrar la planilla** de un empleador y mes emite las **boletas** (copia fiel de cada
   una: es el documento legal) y bloquea las novedades del mes. No se cierra con observaciones que
-  bloquean (tasas provisionales, CUSPP faltante, trabajador sin sueldo). Reabrir (solo
+  bloquean (tasas provisionales, CUSPP faltante, trabajador sin sueldo, saldo de vacaciones o rentas de
+  quinta previas faltantes). Un concepto fijo se puede terminar en un mes abierto. Reabrir (solo
   administrador) anula las boletas con motivo. La entrega de la boleta se registra aparte.
 - **R-124** **Observaciones**: la planilla lista lo que falta revisar (tasas, CUSPP, sueldo menor a
   la RMV, descanso médico que supera 20 días en el año, REMYPE no registrado, rentas de quinta

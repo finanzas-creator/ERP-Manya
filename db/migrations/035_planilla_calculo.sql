@@ -60,11 +60,16 @@ language plpgsql stable as $$
 #variable_conflict use_column
 begin
   return (
+  -- la inscripción vigente cuenta desde el inicio de su cadena continua (renovaciones o cambio de categoría)
+  with recursive cadena as (
+    select r.desde, r.categoria from empleador_remype r join trabajador t on t.empleador_id = r.empleador_id
+    where t.id = p_t and r.desde <= f and (r.hasta is null or r.hasta >= f)
+    union
+    select r.desde, c.categoria from cadena c join empleador_remype r on r.desde < c.desde and r.hasta >= c.desde - 1
+    join trabajador t on t.empleador_id = r.empleador_id and t.id = p_t
+  )
   select coalesce(t.regimen_pactado,
-           (select r.categoria from empleador_remype r
-            where r.empleador_id = t.empleador_id and r.desde <= f and (r.hasta is null or r.hasta >= f)
-              and t.fecha_ingreso >= r.desde
-            order by r.desde desc limit 1),
+           (select (array_agg(c.categoria))[1] from cadena c having t.fecha_ingreso >= min(c.desde)),
            'general')
   from trabajador t where t.id = p_t
   );
@@ -80,6 +85,40 @@ begin
   select sueldo_basico from remuneracion
   where trabajador_id = p_t and anulado_en is null and vigente_desde <= f
   order by vigente_desde desc limit 1
+  );
+end
+$$;
+
+-- R-105: sueldo de un tramo del mes ponderado por los días de cada sueldo vigente (base 30).
+create function sueldo_mes(p_t uuid, p_desde date, p_hasta date)
+returns numeric
+language plpgsql stable as $$
+#variable_conflict use_column
+begin
+  return (
+  select sum(x.sueldo * x.d) / nullif(sum(x.d), 0)
+  from (
+    select r.sueldo_basico as sueldo,
+           case when least(coalesce(r.siguiente - 1, p_hasta), p_hasta) = fin_mes(p_desde)
+                then 30 - extract(day from greatest(r.vigente_desde, p_desde))::int + 1
+                else least(coalesce(r.siguiente - 1, p_hasta), p_hasta) - greatest(r.vigente_desde, p_desde) + 1 end as d
+    from (select vigente_desde, sueldo_basico, lead(vigente_desde) over (order by vigente_desde) as siguiente
+          from remuneracion where trabajador_id = p_t and anulado_en is null) r
+    where r.vigente_desde <= p_hasta and (r.siguiente is null or r.siguiente > p_desde)
+  ) x where x.d > 0
+  );
+end
+$$;
+
+-- R-101, R-119: días de vacaciones por año del régimen (0 con jornada menor a la mínima).
+create function vacaciones_dias_en(p_t uuid, f date)
+returns numeric
+language plpgsql stable as $$
+#variable_conflict use_column
+begin
+  return (
+  select case when t.jornada_horas >= legal('jornada_minima_horas', f) then rd.vacaciones_dias else 0 end
+  from trabajador t join regimen_derecho rd on rd.regimen = regimen_en(p_t, f) where t.id = p_t
   );
 end
 $$;
@@ -159,8 +198,9 @@ where t.anulado_en is null;
 create view v_pl_mes with (security_invoker = true) as
 select g.trabajador_id, g.empleador_id, g.periodo, g.desde, g.hasta, g.dias_vinculo,
        least(g.dias_vinculo, au.dias) as dias_ausencia,
-       greatest(0, g.dias_vinculo - au.no_sueldo) as dias_sueldo,
-       least(g.dias_vinculo, au.no_pagados) as dias_no_pagados,
+       -- ausencias que juntas cubren todo el vínculo del mes cuentan todos sus días (R-103)
+       case when au.no_sueldo >= g.hasta - g.desde + 1 then 0 else greatest(0, g.dias_vinculo - au.no_sueldo) end as dias_sueldo,
+       case when au.no_pagados >= g.hasta - g.desde + 1 then g.dias_vinculo else least(g.dias_vinculo, au.no_pagados) end as dias_no_pagados,
        least(g.dias_vinculo, au.vacaciones) as dias_vacaciones,
        least(g.dias_vinculo, au.subsidiados) as dias_subsidiados,
        least(g.dias_vinculo, au.no_cts) as dias_no_cts,
@@ -263,7 +303,8 @@ begin
   cross join lateral (select case when d.desde = date_trunc('month', d.desde)::date then d.desde
                                   else (date_trunc('month', d.desde) + interval '1 month')::date end as desde_completo) dc
   cross join lateral (select meses_completos(d.desde, p_al) as meses,
-                             (select no_grati from ausencias_en(p_t, dc.desde_completo, p_al)) as nc,
+                             (select no_grati from ausencias_en(p_t, dc.desde_completo,
+                                case when p_al = fin_mes(p_al) then p_al else (date_trunc('month', p_al) - interval '1 day')::date end)) as nc,
                              regimen_en(p_t, p_al) as reg,
                              remuneracion_computable(p_t, p_fecha_rc, p_ventana) as rc) x
   join regimen_derecho rd on rd.regimen = x.reg
@@ -340,7 +381,7 @@ begin
   cross join lateral (select (select no_cts from ausencias_en(p_t, d.desde, p_al)) as nc) a
   cross join lateral (
     select greatest(0, dias_laborales(d.desde, p_al) - a.nc) as dias, a.nc,
-           (t.fecha_ingreso + interval '1 month')::date <= p_al + 1 and t.jornada_horas >= 4 as elegible,
+           (t.fecha_ingreso + interval '1 month')::date <= p_al + 1 and t.jornada_horas >= legal('jornada_minima_horas', p_al) as elegible,
            regimen_en(p_t, p_al) as reg,
            remuneracion_computable(p_t, p_al, p_ventana) as rc,
            -- 1/6 de la gratificación cobrada dentro del semestre (no incluye la bonificación)
@@ -417,9 +458,8 @@ begin
   return (
   select coalesce((
            select (
-             select coalesce(sum(rd.vacaciones_dias), 0)
+             select coalesce(sum(vacaciones_dias_en(p_t, (t.fecha_ingreso + make_interval(years => k) - interval '1 day')::date)), 0)
              from generate_series(1, extract(year from age(s.al + 1, t.fecha_ingreso))::int) k
-             join regimen_derecho rd on rd.regimen = regimen_en(p_t, (t.fecha_ingreso + make_interval(years => k) - interval '1 day')::date)
            ) - s.dias_pendientes
            from saldo_vacaciones_inicial s where s.trabajador_id = p_t), 0)
        + coalesce((
@@ -443,15 +483,15 @@ from (
          (b.fecha_ingreso + make_interval(years => k - 1))::date as inicio,
          (b.fecha_ingreso + make_interval(years => k) - interval '1 day')::date as fin,
          (b.fecha_ingreso + make_interval(years => k + 1) - interval '1 day')::date as vence,
-         rd.vacaciones_dias as ganados,
-         sum(rd.vacaciones_dias) over (partition by b.trabajador_id order by k) as acumulado
+         vacaciones_dias_en(b.trabajador_id, (b.fecha_ingreso + make_interval(years => k) - interval '1 day')::date) as ganados,
+         sum(vacaciones_dias_en(b.trabajador_id, (b.fecha_ingreso + make_interval(years => k) - interval '1 day')::date))
+           over (partition by b.trabajador_id order by k) as acumulado
   from (
     select t.id as trabajador_id, t.fecha_ingreso, coalesce(t.fecha_cese, current_date) as corte,
            vacaciones_consumidas(t.id, coalesce(t.fecha_cese, current_date)) as consumido
     from trabajador t where t.anulado_en is null
   ) b
   cross join lateral generate_series(1, extract(year from age(b.corte + 1, b.fecha_ingreso))::int) k
-  join regimen_derecho rd on rd.regimen = regimen_en(b.trabajador_id, (b.fecha_ingreso + make_interval(years => k) - interval '1 day')::date)
 ) p;
 
 -- Resumen por trabajador: pendientes, vencidas, adelantadas, truncas y su valor.
@@ -468,13 +508,12 @@ from (
   select t.id as trabajador_id, t.empleador_id, c.corte, vacaciones_consumidas(t.id, c.corte) as consumido,
          -- truncas: días del régimen × días del año en curso / 360, con al menos un mes de servicio
          case when (t.fecha_ingreso + interval '1 month')::date <= c.corte + 1
-              then round(rd.vacaciones_dias * dias_laborales(
+              then round(vacaciones_dias_en(t.id, c.corte) * dias_laborales(
                      (t.fecha_ingreso + make_interval(years => extract(year from age(c.corte + 1, t.fecha_ingreso))::int))::date, c.corte) / 360.0, 2)
               else 0 end as dias_trunca,
          remuneracion_computable(t.id, c.corte, (date_trunc('month', c.corte) - interval '1 month')::date) as computable
   from trabajador t
   cross join lateral (select coalesce(t.fecha_cese, current_date) as corte) c
-  join regimen_derecho rd on rd.regimen = regimen_en(t.id, c.corte)
   where t.anulado_en is null
 ) b
 left join (
@@ -489,7 +528,7 @@ select l.trabajador_id, l.periodo, l.concepto, c.nombre, c.tipo, l.cantidad, l.m
 from (
   -- R-105: sueldo por los días que se pagan como sueldo
   select m.trabajador_id, m.periodo, 'SUELDO' as concepto, m.dias_sueldo::numeric as cantidad,
-         round(m.sueldo_basico * m.dias_sueldo / 30, 2) as monto
+         round(sueldo_mes(m.trabajador_id, m.desde, m.hasta) * m.dias_sueldo / 30, 2) as monto
   from v_pl_mes m
   union all
   select m.trabajador_id, m.periodo, 'ASIG_FAMILIAR', null, m.asig_familiar
@@ -499,12 +538,12 @@ from (
   select m.trabajador_id, m.periodo, ta.concepto_pago, sum(x.d),
          round(sum(x.d) * case when bool_or(ta.es_vacaciones)
                                then m.sueldo_basico + promedio_variable(m.trabajador_id, (m.periodo - interval '1 month')::date)
-                               else m.sueldo_basico + m.asig_familiar end / 30, 2)
+                               else m.sueldo_basico end / 30, 2)   -- la asignación familiar ya va completa
   from v_pl_mes m
   join ausencia a on a.trabajador_id = m.trabajador_id and a.anulado_en is null and a.desde <= m.hasta and a.hasta >= m.desde
   join tipo_ausencia ta on ta.codigo = a.tipo and ta.concepto_pago is not null and ta.concepto_pago <> 'SUELDO'
   cross join lateral (select dias_tramo(greatest(a.desde, m.desde), least(a.hasta, m.hasta)) as d) x
-  group by m.trabajador_id, m.periodo, ta.concepto_pago, m.sueldo_basico, m.asig_familiar
+  group by m.trabajador_id, m.periodo, ta.concepto_pago, m.sueldo_basico
   union all
   -- R-107, R-108, R-109: horas extra, feriados trabajados, tardanzas
   select a.trabajador_id, a.periodo, x.concepto, x.cantidad, x.monto
@@ -737,7 +776,7 @@ select m.trabajador_id, m.empleador_id, m.periodo,
        round(gc.bonificacion - gc1.bonificacion + gp.bonificacion - gp1.bonificacion, 2) as bonificacion,
        round(cts_devengado(m.trabajador_id, s.cts_actual, m.periodo) - cts_devengado(m.trabajador_id, s.cts_actual, s.anterior)
              + cts_devengado(m.trabajador_id, s.cts_previo, m.periodo) - cts_devengado(m.trabajador_id, s.cts_previo, s.anterior), 2) as cts,
-       round(remuneracion_computable(m.trabajador_id, m.hasta, m.periodo) * rd.vacaciones_dias
+       round(remuneracion_computable(m.trabajador_id, m.hasta, m.periodo) * vacaciones_dias_en(m.trabajador_id, m.hasta)
              * greatest(0, m.dias_vinculo - m.dias_no_vacaciones) / 10800, 2) as vacaciones
 from v_pl_mes m
 join regimen_derecho rd on rd.regimen = m.regimen
@@ -789,7 +828,7 @@ left join boleta bo on bo.trabajador_id = m.trabajador_id and bo.periodo = m.per
 create view v_liquidacion_linea with (security_invoker = true) as
 with ces as (
   select t.id as trabajador_id, t.empleador_id, t.fecha_cese, t.fecha_ingreso, t.motivo_cese, t.fecha_fin_contrato,
-         t.periodo_prueba_meses, t.sistema_pension, t.afp_id, t.comision_afp, t.fecha_nacimiento, t.salud,
+         t.periodo_prueba_meses, t.sistema_pension, t.afp_id, t.comision_afp, t.fecha_nacimiento, t.salud, t.jornada_horas,
          regimen_en(t.id, t.fecha_cese) as regimen,
          remuneracion_computable(t.id, t.fecha_cese, (date_trunc('month', t.fecha_cese) - interval '1 month')::date) as computable
   from trabajador t join empleador e on e.id = t.empleador_id
@@ -818,7 +857,8 @@ ingresos as (
     ('INDEM_VACACIONAL', v.dias_vencidos, v.monto_indemnizacion),
     -- R-121: solo si el motivo indemniza y pasó el periodo de prueba
     ('INDEM_DESPIDO', null,
-     case when not mc.indemniza or c.fecha_cese < (c.fecha_ingreso + make_interval(months => c.periodo_prueba_meses))::date then 0
+     case when not mc.indemniza or c.fecha_cese < (c.fecha_ingreso + make_interval(months => c.periodo_prueba_meses))::date
+               or c.jornada_horas < legal('jornada_minima_horas', c.fecha_cese) then 0
           when rd.indem_dias_anio is not null      -- MYPE: días por año, fracción por dozavos, con tope
             then round(c.computable * least(rd.indem_tope_dias, rd.indem_dias_anio * sv.meses_servicio / 12.0) / 30, 2)
           when c.fecha_fin_contrato is not null and c.fecha_fin_contrato > c.fecha_cese   -- plazo fijo: meses que faltaban
@@ -831,7 +871,7 @@ ingresos as (
   union all
   select mv.trabajador_id, mv.concepto, null, round(sum(mv.monto), 2)
   from movimiento mv join concepto_planilla cp on cp.codigo = mv.concepto and cp.liquidacion
-  join ces c on c.trabajador_id = mv.trabajador_id and mv.periodo = date_trunc('month', c.fecha_cese)
+  join ces c on c.trabajador_id = mv.trabajador_id and mv.periodo >= date_trunc('month', c.fecha_cese)
   where mv.anulado_en is null
   group by 1, 2
 ),
@@ -926,7 +966,7 @@ from (
   select m.empleador_id, m.periodo, m.trabajador_id, 'SUELDO_MENOR_RMV',
          'El sueldo básico es menor a la RMV (S/ ' || m.rmv::numeric(10,2) || '): revisa la jornada o el sueldo.', false
   from v_pl_mes m join trabajador t on t.id = m.trabajador_id
-  where m.sueldo_basico < m.rmv and t.jornada_horas >= 4
+  where m.sueldo_basico < m.rmv and t.jornada_horas >= legal('jornada_minima_horas', m.hasta)
   union all
   select p.empleador_id, p.periodo, p.trabajador_id, 'NETO_NEGATIVO', 'El neto a pagar es negativo: revisa descuentos y adelantos.', true
   from v_planilla p where p.neto < 0
@@ -950,9 +990,9 @@ from (
   where not exists (select 1 from empleador_remype r where r.empleador_id = m.empleador_id)
   union all
   select m.empleador_id, m.periodo, m.trabajador_id, 'SALDO_VACACIONES',
-         'Ingresó antes de usar el sistema y no tiene saldo inicial de vacaciones (R-119).', false
+         'Ingresó antes de usar el sistema: registra su saldo inicial de vacaciones (cero si no tiene) (R-119).', true
   from v_pl_mes m join trabajador t on t.id = m.trabajador_id join empleador e on e.id = m.empleador_id
-  where t.fecha_ingreso < e.inicio_planilla and m.periodo = e.inicio_planilla
+  where t.fecha_ingreso < e.inicio_planilla
     and not exists (select 1 from saldo_vacaciones_inicial s where s.trabajador_id = t.id)
   union all
   -- R-113: sin los ingresos del año anteriores al sistema (o de otro empleador) la quinta sale corta

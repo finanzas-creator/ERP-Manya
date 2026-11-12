@@ -64,6 +64,9 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ⬜ Enviar el costo empresa de la planilla a "Planilla y gastos" (GP)
 - ⬜ Constancia de depósito CTS imprimible; préstamos con cronograma de cuotas
 - ⬜ Validar con el contador D-28, D-29, D-30 y cargar REMYPE, saldos de vacaciones y quinta previa reales
+- ⬜ Datos del trabajador con vigencia (asignación familiar, AFP/ONP, salud, jornada): hoy un cambio recalcula meses anteriores (las boletas emitidas no cambian y se marcan "difiere")
+- ⬜ Liquidación emitida como copia fiel (como la boleta); tope de 60 días de incapacidad para CTS; subsidio con el promedio de 12 meses
+- ⬜ Rendimiento: la planilla recalcula todo el historial (≈1 s con 40 personas); guardar resultados al cerrar si crece
 
 ## Después
 - ⬜ Integración SUNAT API SIRE (RVIE): importar comprobantes emitidos de ambas empresas

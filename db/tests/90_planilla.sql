@@ -58,6 +58,9 @@ insert into ausencia (trabajador_id, tipo, desde, hasta) values
   ('00000000-0000-0000-0000-0000000001a4', 'VACACIONES', '2026-08-03', '2026-08-08');
 -- ELI: 30 días pendientes al 01/01/2026 (15 ya vencidos)
 insert into saldo_vacaciones_inicial values ('00000000-0000-0000-0000-0000000001a5', '2026-01-01', 30, 'prueba');
+-- R-119: los demás que ingresaron antes del sistema declaran su saldo (cero)
+insert into saldo_vacaciones_inicial select id, '2026-01-01', 0, 'prueba' from trabajador
+where fecha_ingreso < '2026-01-01' and id not in (select trabajador_id from saldo_vacaciones_inicial);
 
 do $$
 declare
@@ -300,4 +303,62 @@ begin
                  and codigo = 'QUINTA_PREVIA' and bloquea), 'R-124 faltan ene–feb: bloquea';
   insert into quinta_previa (trabajador_id, anio, renta_bruta, retencion) values ('00000000-0000-0000-0000-0000000001a6', 2026, 2260, 0);
   assert not exists (select 1 from v_pl_observacion where trabajador_id = '00000000-0000-0000-0000-0000000001a6' and codigo = 'QUINTA_PREVIA'), 'R-124 registrada';
+end $$;
+
+-- Revisión independiente: casos que antes fallaban
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000001d1"}', false);
+insert into trabajador (id, empleador_id, numero_documento, apellidos_nombres, fecha_ingreso, fecha_cese, motivo_cese, sistema_pension, jornada_horas)
+values ('00000000-0000-0000-0000-0000000001b1', (select id from empleador where ruc = '20000000001'), '10000011', 'IVO (3 horas, despedido)',
+        '2024-01-01', '2026-10-31', 'DESPIDO_ARBITRARIO', 'onp', 3),
+       ('00000000-0000-0000-0000-0000000001b2', (select id from empleador where ruc = '20000000001'), '10000012', 'JUAN (alza a mitad de mes)',
+        '2025-01-01', null, null, 'onp', 8);
+insert into remuneracion (trabajador_id, vigente_desde, sueldo_basico) values
+  ('00000000-0000-0000-0000-0000000001b1', '2024-01-01', 1000),
+  ('00000000-0000-0000-0000-0000000001b2', '2025-01-01', 3000), ('00000000-0000-0000-0000-0000000001b2', '2026-03-16', 4000);
+insert into ausencia (trabajador_id, tipo, desde, hasta) values
+  ('00000000-0000-0000-0000-0000000001b2', 'FALTA', '2026-02-01', '2026-02-14'),
+  ('00000000-0000-0000-0000-0000000001b2', 'LICENCIA_SG', '2026-02-15', '2026-02-28');
+do $$
+declare v numeric; emp smallint := (select id from empleador where ruc = '20000000001');
+begin
+  -- jornada < 4 h: sin vacaciones, sin indemnización por despido, sin CTS
+  assert not exists (select 1 from v_liquidacion_linea where trabajador_id = '00000000-0000-0000-0000-0000000001b1'
+                     and concepto in ('VAC_PENDIENTE', 'VAC_TRUNCA', 'INDEM_VACACIONAL', 'INDEM_DESPIDO', 'CTS')), 'jornada mínima';
+  assert (select sum(vacaciones) from v_provision_mes where trabajador_id = '00000000-0000-0000-0000-0000000001b1') = 0, 'jornada mínima: sin provisión';
+  -- R-105: sueldo ponderado por días cuando cambia a mitad de mes (15 días a 3000 + 15 a 4000)
+  select monto into v from v_pl_linea where trabajador_id = '00000000-0000-0000-0000-0000000001b2' and periodo = '2026-03-01' and concepto = 'SUELDO';
+  assert v = 3500.00, format('sueldo a mitad de mes %s', v);
+  -- R-103: dos ausencias que cubren febrero no dejan días de sueldo
+  assert not exists (select 1 from v_pl_linea where trabajador_id = '00000000-0000-0000-0000-0000000001b2' and periodo = '2026-02-01' and concepto = 'SUELDO'), 'ausencias que cubren el mes';
+  -- R-104: subsidio sin duplicar la asignación familiar (CARO no tiene AF; BETO sí)
+  insert into ausencia (trabajador_id, tipo, desde, hasta) values ('00000000-0000-0000-0000-0000000001a2', 'MATERNIDAD', '2026-05-01', '2026-05-31');
+  assert (select sum(monto) from v_pl_linea where trabajador_id = '00000000-0000-0000-0000-0000000001a2' and periodo = '2026-05-01'
+          and concepto in ('ASIG_FAMILIAR', 'SUBSIDIO_MAT')) = 2113.00, 'subsidio + AF = sueldo + AF';
+  -- R-100: una renovación o cambio de categoría del REMYPE no pasa a nadie al régimen general
+  update empleador_remype set hasta = '2023-12-31' where empleador_id = emp;
+  insert into empleador_remype (empleador_id, categoria, desde) values (emp, 'pequena', '2024-01-01');
+  assert regimen_en('00000000-0000-0000-0000-0000000001a2', '2026-01-31') = 'general', 'R-100 antes del REMYPE sigue general';
+  assert regimen_en('00000000-0000-0000-0000-0000000001a3', '2026-01-31') = 'pequena', 'R-100 cadena continua';
+  assert regimen_en('00000000-0000-0000-0000-0000000001a4', '2026-01-31') = 'pequena', 'R-100 ingresó con la inscripción anterior';
+  -- reingreso: el mismo documento con otra fecha de ingreso
+  insert into trabajador (empleador_id, numero_documento, apellidos_nombres, fecha_ingreso, sistema_pension)
+  values (emp, '10000005', 'ELI (reingreso)', '2026-09-01', 'onp');
+  -- R-123: un fijo iniciado en un mes cerrado se puede terminar en un mes abierto, no antes
+  insert into saldo_vacaciones_inicial select id, '2026-01-01', 0, 'prueba' from trabajador
+  where fecha_ingreso < '2026-01-01' and id not in (select trabajador_id from saldo_vacaciones_inicial);
+  perform cerrar_planilla(emp, '2026-02-01');
+  update concepto_fijo set hasta = '2026-04-01' where trabajador_id = '00000000-0000-0000-0000-0000000001a1';
+  begin
+    update concepto_fijo set hasta = '2026-01-01' where trabajador_id = '00000000-0000-0000-0000-0000000001a1';
+    raise exception 'debió bloquear';
+  exception when others then assert sqlerrm like 'R-123%', sqlerrm; end;
+end $$;
+
+-- R-125: un usuario sin rol (o inactivo) no cierra planillas
+update usuario set activo = false where id = '00000000-0000-0000-0000-0000000001d1';
+do $$
+begin
+  perform cerrar_planilla((select id from empleador where ruc = '20000000001'), '2026-04-01');
+  raise exception 'debió rechazar';
+exception when others then assert sqlerrm like 'R-125%', sqlerrm;
 end $$;

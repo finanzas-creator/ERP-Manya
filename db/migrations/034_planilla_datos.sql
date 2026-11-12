@@ -9,7 +9,7 @@ create type sistema_salud as enum ('essalud', 'eps', 'sis');              -- R-1
 create type tipo_concepto as enum ('ingreso', 'descuento', 'aporte');     -- R-110 (aporte = cargo del empleador)
 create type parametro_legal_tipo as enum (
   'rmv', 'uit', 'onp', 'essalud', 'asignacion_familiar', 'bonificacion_essalud', 'bonificacion_eps',
-  'quinta_deduccion_uit', 'prima_edad_maxima', 'descanso_medico_dias');
+  'quinta_deduccion_uit', 'prima_edad_maxima', 'descanso_medico_dias', 'jornada_minima_horas');
 
 -- ---------- Parámetros legales con vigencia (hechos: norma publicada) ----------
 create table parametro_legal (
@@ -48,7 +48,8 @@ insert into parametro_legal (parametro, vigente_desde, valor, norma, fuente_url)
   ('bonificacion_eps', '2015-07-01', 0.0675, 'Ley 30334', null),
   ('quinta_deduccion_uit', '2015-01-01', 7, 'TUO Ley del Impuesto a la Renta, art. 46', null),
   ('prima_edad_maxima', '2000-01-01', 65, 'TUO Ley del SPP: sin prima de seguro desde los 65 años', null),
-  ('descanso_medico_dias', '2000-01-01', 20, 'Ley 26790: primeros 20 días de incapacidad a cargo del empleador', null);
+  ('descanso_medico_dias', '2000-01-01', 20, 'Ley 26790: primeros 20 días de incapacidad a cargo del empleador', null),
+  ('jornada_minima_horas', '2000-01-01', 4, 'Jornada mínima para CTS, vacaciones e indemnización: D.S. 001-97-TR art. 4, D.Leg. 713 art. 12, D.Leg. 728 art. 22', null);
 
 -- Tramos del impuesto de quinta categoría (en UIT).
 create table tramo_quinta (
@@ -322,7 +323,8 @@ create table trabajador (
   check ((fecha_cese is null) = (motivo_cese is null)),
   check (fecha_cese is null or fecha_cese >= fecha_ingreso)
 );
-create unique index trabajador_documento on trabajador (empleador_id, tipo_documento, numero_documento) where anulado_en is null;
+-- Un reingreso es otro registro (otra fecha de ingreso) del mismo documento.
+create unique index trabajador_documento on trabajador (empleador_id, tipo_documento, numero_documento, fecha_ingreso) where anulado_en is null;
 create unique index trabajador_codigo_externo on trabajador (empleador_id, codigo_externo) where anulado_en is null;
 
 -- Sueldo básico con vigencia (el sueldo de un mes es el vigente al final del vínculo en el mes).
@@ -489,12 +491,33 @@ do $$
 declare t record;
 begin
   for t in select * from (values ('ausencia', 'desde'), ('asistencia_dia', 'fecha'), ('movimiento', 'periodo'),
-                                 ('remuneracion', 'vigente_desde'), ('concepto_fijo', 'desde')) as x(tabla, col)
+                                 ('remuneracion', 'vigente_desde')) as x(tabla, col)
   loop
     execute format('create trigger %I before insert or update or delete on %I
                     for each row execute function bloquear_planilla_cerrada(%L)', t.tabla || '_cierre', t.tabla, t.col);
   end loop;
 end $$;
+
+-- Un concepto fijo se puede terminar o anular mientras no cambie lo pagado en un mes cerrado (R-123).
+create function bloquear_fijo_cerrado() returns trigger language plpgsql as $$
+declare
+  vigente_antes boolean := tg_op <> 'INSERT' and old.anulado_en is null;
+  vigente_ahora boolean := tg_op <> 'DELETE' and new.anulado_en is null;
+begin
+  if exists (
+    select 1 from planilla_cierre c join trabajador t on t.empleador_id = c.empleador_id
+    where t.id = coalesce(new.trabajador_id, old.trabajador_id)
+      and (vigente_antes and c.periodo >= old.desde and (old.hasta is null or c.periodo <= old.hasta)
+           and (tg_op = 'DELETE' or not vigente_ahora or c.periodo < new.desde or (new.hasta is not null and c.periodo > new.hasta)
+                or new.monto <> old.monto or new.concepto <> old.concepto)
+        or vigente_ahora and c.periodo >= new.desde and (new.hasta is null or c.periodo <= new.hasta)
+           and not (vigente_antes and c.periodo >= old.desde and (old.hasta is null or c.periodo <= old.hasta)))) then
+    raise exception 'R-123: el cambio afecta un mes con planilla cerrada; termina el concepto en un mes abierto';
+  end if;
+  return coalesce(new, old);
+end $$;
+create trigger concepto_fijo_cierre before insert or update or delete on concepto_fijo
+  for each row execute function bloquear_fijo_cerrado();
 
 -- ---------- Permisos y bitácora (R-80, R-82, R-125) ----------
 do $$

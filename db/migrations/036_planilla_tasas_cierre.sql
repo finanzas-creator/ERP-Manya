@@ -140,7 +140,7 @@ create function cerrar_planilla(p_empleador smallint, p_periodo date) returns in
 language plpgsql security definer set search_path = public as $$
 declare n int; obs text;
 begin
-  if (select app_rol()) not in ('admin', 'tesoreria') then raise exception 'R-125: sin permiso'; end if;
+  if coalesce((select app_rol()) in ('admin', 'tesoreria'), false) is false then raise exception 'R-125: sin permiso'; end if;
   p_periodo := date_trunc('month', p_periodo)::date;
   if exists (select 1 from planilla_cierre where empleador_id = p_empleador and periodo = p_periodo) then
     raise exception 'La planilla de % ya está cerrada', to_char(p_periodo, 'MM/YYYY');

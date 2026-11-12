@@ -154,6 +154,7 @@ export type Database = {
       app_rol: { Args: Record<string, unknown>; Returns: unknown }
       asig_familiar_en: { Args: Record<string, unknown>; Returns: unknown }
       ausencias_en: { Args: Record<string, unknown>; Returns: unknown }
+      bloquear_fijo_cerrado: { Args: Record<string, unknown>; Returns: unknown }
       bloquear_mes_cerrado: { Args: Record<string, unknown>; Returns: unknown }
       bloquear_planilla_cerrada: { Args: Record<string, unknown>; Returns: unknown }
       cerrar_planilla: { Args: Record<string, unknown>; Returns: unknown }
@@ -220,10 +221,12 @@ export type Database = {
       semestre_cts: { Args: Record<string, unknown>; Returns: unknown }
       semestre_grati: { Args: Record<string, unknown>; Returns: unknown }
       sueldo_en: { Args: Record<string, unknown>; Returns: unknown }
+      sueldo_mes: { Args: Record<string, unknown>; Returns: unknown }
       tasa_afp_en: { Args: Record<string, unknown>; Returns: unknown }
       tc_de: { Args: Record<string, unknown>; Returns: unknown }
       tolerancia_usd: { Args: Record<string, unknown>; Returns: unknown }
       vacaciones_consumidas: { Args: Record<string, unknown>; Returns: unknown }
+      vacaciones_dias_en: { Args: Record<string, unknown>; Returns: unknown }
       yo: { Args: Record<string, unknown>; Returns: unknown }
     }
     Enums: {
@@ -235,7 +238,7 @@ export type Database = {
       momento_cuota: 'inicio' | 'fin'
       moneda: 'USD' | 'PEN'
       naturaleza: 'propio' | 'terceros'
-      parametro_legal_tipo: 'rmv' | 'uit' | 'onp' | 'essalud' | 'asignacion_familiar' | 'bonificacion_essalud' | 'bonificacion_eps' | 'quinta_deduccion_uit' | 'prima_edad_maxima' | 'descanso_medico_dias'
+      parametro_legal_tipo: 'rmv' | 'uit' | 'onp' | 'essalud' | 'asignacion_familiar' | 'bonificacion_essalud' | 'bonificacion_eps' | 'quinta_deduccion_uit' | 'prima_edad_maxima' | 'descanso_medico_dias' | 'jornada_minima_horas'
       regimen_laboral: 'micro' | 'pequena' | 'general'
       rol: 'admin' | 'tesoreria' | 'ceo'
       sistema_pension: 'onp' | 'afp' | 'sin_sistema'
@@ -259,7 +262,7 @@ export const ENUMS = {
   momento_cuota: ['inicio', 'fin'],
   moneda: ['USD', 'PEN'],
   naturaleza: ['propio', 'terceros'],
-  parametro_legal_tipo: ['rmv', 'uit', 'onp', 'essalud', 'asignacion_familiar', 'bonificacion_essalud', 'bonificacion_eps', 'quinta_deduccion_uit', 'prima_edad_maxima', 'descanso_medico_dias'],
+  parametro_legal_tipo: ['rmv', 'uit', 'onp', 'essalud', 'asignacion_familiar', 'bonificacion_essalud', 'bonificacion_eps', 'quinta_deduccion_uit', 'prima_edad_maxima', 'descanso_medico_dias', 'jornada_minima_horas'],
   regimen_laboral: ['micro', 'pequena', 'general'],
   rol: ['admin', 'tesoreria', 'ceo'],
   sistema_pension: ['onp', 'afp', 'sin_sistema'],
