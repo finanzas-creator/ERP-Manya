@@ -36,16 +36,23 @@ Postgres: todo se envía por la Management API con `db/supabase.py` y la variabl
 1. **Base:** `python3 db/supabase.py <ref> db/migrations/*.sql` (en orden). No se aplica
    `db/local/` (Supabase ya trae `auth` y los roles). Una migración nueva se aplica igual,
    solo ese archivo.
-2. **Datos:** `python3 etl/migrar.py data/sheet.xlsx etl/out --inserts` escribe, además de
-   `carga.sql`, los lotes `etl/out/lotes/NNN.sql` (INSERT, sin COPY, cada uno en su
-   transacción). Se envían en orden: `python3 db/supabase.py <ref> etl/out/lotes/*.sql`.
-   Antes, `make test` en local debe pasar; luego se comparan conteos y totales de
-   `v_ventas_mes`, `v_kpi_hoy_calc` y `v_gp_agencia_mes` entre local y Supabase.
+2. **Datos (R-71):** se cargan siempre con `etl/sincronizar.py`, que nunca deja producción a
+   medias: los lotes entran al esquema `carga` y `aplicar_carga()` reemplaza todo en una sola
+   transacción, conservando lo que solo vive en el ERP (datos fiscales, cuentas, gestiones,
+   autodetracciones, archivos, notas de crédito, TC de SUNAT).
+   1. `python3 etl/sincronizar.py rangos` → plan de lectura (`etl/out/grid/plan.json`).
+   2. Leer cada llamada con el conector de Google Sheets (`spreadsheets.get` con
+      `includeGridData`, los campos del plan) y guardar cada respuesta, tal cual, como
+      `etl/out/grid/NN.json`.
+   3. `python3 etl/sincronizar.py verificar etl/out/grid` (si falta algo, dice qué leer).
+   4. `python3 etl/sincronizar.py armar etl/out/grid` → `data/sheet.xlsx` y los lotes.
+   5. `python3 etl/sincronizar.py cargar --revision "<modifiedTime del sheet en Drive>"`.
+   La tarea programada hace esto cada hora (D-25); `python3 etl/sincronizar.py ultima` dice
+   la revisión de la última carga para no recargar si el sheet no cambió. Para revisar a
+   fondo, en local: `make db && make migrate-data && make test`.
 3. **Usuarios:** invitarlos en Auth y registrar su fila en `usuario` con el mismo id y su rol.
    En Auth, la *Site URL* debe ser la dirección de la app: el correo de invitación lleva a la
    app, donde la persona crea su contraseña. "Olvidé mi contraseña" usa el mismo flujo.
-   Para recargar desde cero, primero vaciar la carga: `truncate` de las tablas que llenan los
-   lotes, más `gestion_cobranza` que las referencia (nunca `config`, `usuario`, `auditoria`, `cierre_mensual` ni `tipo_cambio_sunat`), con `restart identity`.
 4. **App:** https://manya-erp.pages.dev — proyecto Cloudflare Pages `manya-erp` (subida
    directa, sin Git). Compilar `app/` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (la
    clave anon de Supabase), sin `VITE_DEV_AUTH`, y publicar: `make publicar-app` hace ambas

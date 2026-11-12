@@ -59,6 +59,7 @@ CONTROL
 | `v_proyeccion_cobros` | Saldo por cobrar por semana de vencimiento (vencido, facturado, por facturar) | R-23, R-33 |
 | `v_morosidad` | Clientes con deuda vencida, su última gestión y estado (sin gestión, compromiso incumplido…) | R-37, R-38 |
 | `v_cliente_mes` · `v_retencion_mes` · `v_cliente_caido` | Ingreso por cliente y mes; retención mensual de recurrentes; clientes caídos | R-53, R-54 |
+| `carga_sheet` · `preparar_carga()` · `aplicar_carga()` | Bitácora de actualizaciones desde el sheet; esquema de carga y reemplazo en una transacción conservando lo que solo vive en el ERP | R-71 |
 | `v_cobrado_mes` | Ingreso cobrado base caja por mes y empresa (sin IGV ni pauta), y su cuadre con lo cobrado total: + IGV + pauta de clientes; detracciones | R-45 |
 | `v_cxc_venta` | Cuentas por cobrar por contrato: total con IGV − cobrado, en vencido, por vencer y por facturar | R-46 |
 | `v_cobranza_cliente` | Cartera por cliente ("¿Quién nos debe?"): por cobrar, vencido, mayor atraso, gestión | R-37 |

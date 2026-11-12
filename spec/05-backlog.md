@@ -24,6 +24,8 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Generar plan de pagos para ventas que no lo tienen
 - ✅ Modalidad por venta (R-02, D-21) · ✅ elegirla al registrar la venta
 
+- ✅ Actualización automática desde el sheet cada hora, en una transacción y conservando lo que solo vive en el ERP (R-71)
+
 ## R2 · Facturación y cobranza
 - ✅ Emitir comprobante agrupando cuotas (detracción sugerida por R-22) · ✅ serie y número siguiente por empresa
 - ✅ Facturación: todos los comprobantes por empresa, mes y estado; detalle con cuotas, pagos, notas y archivos PDF/XML

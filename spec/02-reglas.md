@@ -73,6 +73,7 @@ como *(config)* se cambian en Configuración, no en el código.
 
 ## Cierre, seguridad y trazabilidad
 - **R-70** El cierre mensual bloquea la creación y modificación de registros de ese mes y fija su TC.
+- **R-71** **Actualización desde el sheet** (mientras el sheet administrativo sea la fuente): el ERP se recarga desde el sheet automáticamente, en una sola transacción; si algo falla, nada cambia y el error queda en la bitácora de cargas. Se conserva lo que **solo vive en el ERP**: datos fiscales de las empresas, N° de cuenta y CCI, activo/inactivo de cuentas, RUC y datos fiscales de los clientes, marcas agregadas, gestiones de cobranza, autodetracciones registradas y sus constancias, archivos PDF/XML de comprobantes, notas de crédito y el TC de los meses que el sheet no tiene. Lo demás (contratos, cuotas, comprobantes, pagos, planilla, herramientas, comisiones, catálogos) se registra **en el sheet**. No se aplica una carga que trae más de 2% *(config)* menos clientes, ventas, comprobantes, cuotas o pagos que los que hay. La app muestra la hora de la última carga.
 - **R-80** Roles: **Administrador** (todo, incluida configuración), **Tesorería** (clientes, ventas, cuotas, comprobantes, pagos y costos), **CEO** (solo lectura de KPIs).
 - **R-81** Nada se borra: se anula con motivo. Lo anulado no suma en ningún cálculo.
 - **R-82** Todo cambio queda en la bitácora: quién, cuándo, valor anterior y nuevo.

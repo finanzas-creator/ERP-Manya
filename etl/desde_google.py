@@ -38,10 +38,27 @@ def valor(c):
         return ERRORES.get(ev["errorValue"].get("type"), "#ERROR!")
     return None
 
+def hojas_de(doc):
+    """La respuesta de la API puede venir sola o envuelta (p. ej. {"content": {"sheets": [...]}})."""
+    if isinstance(doc, dict):
+        if "sheets" in doc:
+            return doc["sheets"]
+        for v in doc.values():
+            r = hojas_de(v)
+            if r:
+                return r
+    if isinstance(doc, list):
+        for v in doc:
+            r = hojas_de(v)
+            if r:
+                return r
+    return None
+
+
 def main(carpeta, salida):
     hojas = collections.defaultdict(dict)   # titulo -> {fila: [valores]}
     for f in sorted(glob.glob(os.path.join(carpeta, "*.json"))):
-        for s in json.load(open(f, encoding="utf-8"))["sheets"]:
+        for s in hojas_de(json.load(open(f, encoding="utf-8"))):
             t = s["properties"]["title"]
             for d in s.get("data", []):
                 r0, c0 = d.get("startRow", 0), d.get("startColumn", 0)
