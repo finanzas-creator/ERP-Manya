@@ -27,7 +27,7 @@ const Configuracion = lazy(() => import('./pages/Configuracion'))
 const Validacion = lazy(() => import('./pages/Validacion'))
 const Planillas = lazy(() => import('./pages/Planillas'))
 
-type Acceso = 'todos' | 'opera' | 'admin'
+type Acceso = 'todos' | 'opera' | 'admin' | 'planillas'
 const NAV: { grupo: string; items: { a: string; label: string; icono: NombreIcono; acceso: Acceso }[] }[] = [
   { grupo: 'Operación', items: [
     { a: '/', label: 'Resumen', icono: 'resumen', acceso: 'todos' },
@@ -46,7 +46,7 @@ const NAV: { grupo: string; items: { a: string; label: string; icono: NombreIcon
     { a: '/costos', label: 'Planilla y gastos', icono: 'costos', acceso: 'opera' },
   ] },
   { grupo: 'Personas', items: [
-    { a: '/planillas', label: 'Planillas', icono: 'planillas', acceso: 'opera' },
+    { a: '/planillas', label: 'Planillas', icono: 'planillas', acceso: 'planillas' },
   ] },
   { grupo: 'Sistema', items: [
     { a: '/revision', label: 'Revisión de datos', icono: 'revision', acceso: 'opera' },
@@ -63,7 +63,10 @@ export default function App() {
   if (debeCrearClave) return <CrearClave />
   const opera = puedeOperar(usuario.rol)
   const admin = usuario.rol === 'admin'
-  const permitido = (a: Acceso) => a === 'todos' || (a === 'opera' && opera) || (a === 'admin' && admin)
+  const planillas = opera || usuario.rol === 'rrhh'   // R-125
+  const soloPlanillas = usuario.rol === 'rrhh'          // recursos humanos no ve ventas ni resultados
+  const permitido = (a: Acceso) => soloPlanillas ? a === 'planillas'
+    : a === 'todos' || (a === 'opera' && opera) || (a === 'admin' && admin) || (a === 'planillas' && planillas)
 
   return (
     <div className="min-h-screen md:flex">
@@ -107,8 +110,8 @@ export default function App() {
         <main className="mx-auto max-w-7xl px-4 py-6">
           <Suspense fallback={<div className="py-8 text-sm text-t3">Cargando…</div>}>
             <Routes>
-              <Route path="/" element={<Resumen />} />
-              <Route path="/resultados" element={<Resultados />} />
+              <Route path="/" element={soloPlanillas ? <Navigate to="/planillas" /> : <Resumen />} />
+              {!soloPlanillas && <Route path="/resultados" element={<Resultados />} />}
               {opera && <>
                 <Route path="/clientes" element={<Clientes />} />
                 <Route path="/clientes/:id" element={<ClienteDetalle />} />
@@ -121,10 +124,10 @@ export default function App() {
                 <Route path="/pauta" element={<Pauta />} />
                 <Route path="/rentabilidad" element={<Rentabilidad />} />
                 <Route path="/costos" element={<Costos />} />
-                <Route path="/planillas" element={<Planillas />} />
                 <Route path="/revision" element={<Revision />} />
                 <Route path="/validacion" element={<Validacion />} />
               </>}
+              {planillas && <Route path="/planillas" element={<Planillas />} />}
               {admin && <Route path="/configuracion" element={<Configuracion />} />}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

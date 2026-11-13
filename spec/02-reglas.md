@@ -210,5 +210,12 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   previas faltantes…). Quien ya trabajaba en el año antes de usar el sistema no se cierra sin sus
   rentas y retenciones previas (sin ellas la quinta sale corta). Una boleta emitida
   que ya no coincide con el recálculo se marca para revisión.
-- **R-125** Planillas lo ven y operan el administrador y tesorería (sueldos son reservados: el CEO
-  no los ve). Los parámetros legales y tasas los edita el administrador.
+- **R-125** Planillas lo ven y operan el administrador, tesorería y **recursos humanos** (rol que
+  solo ve Planillas; sirve también para el usuario de integración). Los sueldos son reservados: el
+  CEO no los ve. Los parámetros legales y tasas los edita el administrador.
+- **R-126** **Integración con el ERP de control de personal**: el ERP de personal envía, por el RUC
+  del empleador y el **código externo** de cada trabajador: altas y cambios de trabajadores (solo los
+  campos que envía; un sueldo distinto crea una nueva vigencia), asistencia por día (reemplaza el
+  día), ausencias de un rango de fechas y montos de un mes (reemplazan lo que la integración envió
+  antes; lo registrado a mano se respeta). Un mes con planilla cerrada no acepta cambios. La planilla,
+  boletas, beneficios y liquidaciones se leen de las mismas vistas que usa la app.

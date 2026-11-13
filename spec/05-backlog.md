@@ -61,7 +61,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Gratificación y bonificación (julio/diciembre), CTS (mayo/noviembre), provisiones por devengado, vacaciones con adelantos y vencidas
 - ✅ Liquidación con CTS/grati/vacaciones truncas e indemnización por régimen y causal
 - ✅ Cierre con boletas emitidas e imprimibles
-- ⬜ Integración con el ERP de control de personal (trabajadores, asistencia, horas extra) por código externo
+- ✅ API de integración con el ERP de control de personal por código externo (R-126) y rol Recursos humanos · ⬜ conectar el ERP de personal (área de sistemas; guía en docs/planillas-integracion.md)
 - ⬜ Archivos PLAME / AFPnet / T-Registro y pago masivo al banco
 - ⬜ Enviar el costo empresa de la planilla a "Planilla y gastos" (GP)
 - ⬜ Constancia de depósito CTS imprimible; préstamos con cronograma de cuotas

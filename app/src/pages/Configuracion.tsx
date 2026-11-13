@@ -199,7 +199,7 @@ function Usuarios() {
         { titulo: 'Rol', celda: (u) => ROLES[u.rol] },
         { titulo: 'Estado', celda: (u) => u.activo ? 'Activo' : <span className="text-t3">Inactivo</span> },
       ]} />
-      <Nota>Para invitar a alguien nuevo, envía su correo y rol (Administrador, Tesorería o CEO): le llega un correo para crear su contraseña.</Nota>
+      <Nota>Para invitar a alguien nuevo, envía su correo y rol (Administrador, Tesorería, CEO o Recursos humanos, que solo ve Planillas): le llega un correo para crear su contraseña.</Nota>
     </Card>
   )
 }

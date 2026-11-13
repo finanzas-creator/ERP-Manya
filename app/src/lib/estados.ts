@@ -52,4 +52,5 @@ export const ROLES = {
   admin: 'Administrador',
   tesoreria: 'Tesorería',
   ceo: 'CEO',
+  rrhh: 'Recursos humanos',
 } as const
