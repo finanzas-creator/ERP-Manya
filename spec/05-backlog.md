@@ -57,7 +57,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 ## R5 · Planillas (HoldingD y entidades MYPE)
 - ✅ Spec R-100…R-125 · ✅ empleadores con REMYPE y régimen por trabajador
 - ✅ Planilla del mes: sueldo, asignación familiar, vacaciones, horas extra 25/35, feriados, faltas, tardanzas, bonos, adelantos
-- ✅ AFP/ONP/EsSalud con tasas SBS del periodo (automático mensual + manual) · ✅ quinta con proyección SUNAT
+- ✅ AFP/ONP/EsSalud con tasas SBS del periodo · ✅ quinta con proyección SUNAT · 🔄 lectura automática de la SBS: bloqueada por su protección anti-bots (nov 2026); se registran a mano cada mes (4 filas) hasta tener una fuente que lo permita
 - ✅ Gratificación y bonificación (julio/diciembre), CTS (mayo/noviembre), provisiones por devengado, vacaciones con adelantos y vencidas
 - ✅ Liquidación con CTS/grati/vacaciones truncas e indemnización por régimen y causal
 - ✅ Cierre con boletas emitidas e imprimibles
