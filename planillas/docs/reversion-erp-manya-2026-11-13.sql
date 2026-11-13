@@ -1,7 +1,7 @@
 -- Reversión en la base del ERP de Manya (ejecutada el 13/11/2026) de lo que se aplicó por error ese día:
 -- migraciones de planillas 035–041 y la carga de prueba de HoldingD. Planillas es un sistema
 -- independiente: nada suyo vive en la base de Manya. Deja la base como la definen las migraciones de main.
--- Queda solo el valor 'rrhh' del tipo rol de Manya (Postgres no borra valores de un enum; no se usa).
+-- El valor 'rrhh' del tipo rol se quitó después con reversion-erp-manya-rol-rrhh.sql.
 begin;
 -- cron de tasas SBS
 do $$ begin
