@@ -166,8 +166,11 @@ function ImprimirBoletas({ empleador, mes, filas, onCerrar }: { empleador: Fila<
       {!data && <div className="text-sm text-t3">Preparando…</div>}
       {data && filas.map((f) => {
         const d = data.get(f.trabajador_id!)
-        return d && <div key={f.trabajador_id} className="salto-pagina">
-          <Boleta empleador={d.empleador} periodo={mes} c={d.cabecera} lineas={d.lineas} borrador={!f.boleta_id} />
+        // dos copias por hoja: empleador y trabajador
+        return d && <div key={f.trabajador_id} className="salto-pagina flex flex-col gap-6">
+          <Boleta empleador={d.empleador} periodo={mes} c={d.cabecera} lineas={d.lineas} borrador={!f.boleta_id} copia="Copia empleador" />
+          <div className="border-t border-dashed border-black/40" />
+          <Boleta empleador={d.empleador} periodo={mes} c={d.cabecera} lineas={d.lineas} borrador={!f.boleta_id} copia="Copia trabajador" />
         </div>
       })}
     </VistaImpresion>

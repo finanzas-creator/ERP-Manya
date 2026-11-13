@@ -629,12 +629,11 @@ begin
   select case when p_mes = 12 then i.imp_extra else i.imp end,
          case when p_cese then 0                                                   -- R-122: se regulariza en la liquidación
               when p_mes = 12 then round(i.imp_extra - (select ret from w where k = 11), 2)   -- puede ser devolución
+              -- ene–mar ÷12; desde abril, lo que falta ÷ meses que faltan (abr ÷9, may ÷8, ago ÷5, set ÷4:
+              -- los divisores de SUNAT; el resto del tramo da lo mismo y admite lo retenido antes del sistema)
               else greatest(0, round(case
                      when p_mes <= 3 then i.imp / 12
-                     when p_mes = 4 then (i.imp - (select ret from w where k = 3)) / 9
-                     when p_mes <= 7 then (i.imp - (select ret from w where k = 4)) / 8
-                     when p_mes = 8 then (i.imp - (select ret from w where k = 7)) / 5
-                     else (i.imp - (select ret from w where k = 8)) / 4 end, 2))
+                     else (i.imp - (select ret from w where k = p_mes - 1)) / (13 - p_mes) end, 2))
                    + greatest(0, i.imp_extra - i.imp)
          end
   from i;

@@ -142,9 +142,10 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   ingresos afectos de meses anteriores (de este empleador y de otros, o anteriores al sistema,
   según certificado) + ingresos ordinarios del mes + remuneración ordinaria mensual × meses que
   faltan + gratificaciones ordinarias que faltan; menos 7 UIT; impuesto por tramos (8%, 14%, 17%,
-  20%, 30% hasta 5, 20, 35, 45 UIT y más). Retención: ene–mar ÷12; abr (− retenido ene–mar) ÷9;
-  may–jul (− ene–abr) ÷8; ago (− ene–jul) ÷5; set–nov (− ene–ago) ÷4; dic = impuesto − retenido
-  ene–nov. Los ingresos extraordinarios del mes (horas extra, bonos no regulares) suman la
+  20%, 30% hasta 5, 20, 35, 45 UIT y más). Retención: ene–mar ÷12; desde abril, (impuesto − lo ya
+  retenido en el año) ÷ meses que faltan incluido el actual (abr ÷9, may ÷8, ago ÷5, set ÷4 como
+  SUNAT; en los demás meses da lo mismo si nada cambia, y admite empezar a mitad de año con lo
+  retenido acumulado, D-34); dic = impuesto − retenido ene–nov. Los ingresos extraordinarios del mes (horas extra, bonos no regulares) suman la
   diferencia de impuesto que generan. Lo retenido en meses cerrados es el de su boleta emitida.
   Un trabajador **no domiciliado** retiene 30% de sus ingresos afectos de cada mes, sin deducciones
   ni proyección *(parámetro `quinta_no_domiciliado`)*.

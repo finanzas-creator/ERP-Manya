@@ -171,11 +171,11 @@ begin
   assert (select monto from v_liquidacion_linea where trabajador_id = dani and concepto = 'AFP_APORTE') = 48.00, 'R-120 AFP sobre vacaciones';
   -- R-122: lo percibido en el año no llega a 7 UIT: se devuelve todo lo retenido
   select sum(retencion) into v from v_pl_quinta where trabajador_id = dani and periodo between '2026-01-01' and '2026-09-01';
-  assert v = 459.95, format('R-113 retenido dani %s', v);
-  assert (select monto from v_liquidacion_linea where trabajador_id = dani and concepto = 'DEVOL_QUINTA') = 459.95, 'R-122 devolución';
+  assert v = 459.94, format('R-113 retenido dani %s', v);
+  assert (select monto from v_liquidacion_linea where trabajador_id = dani and concepto = 'DEVOL_QUINTA') = 459.94, 'R-122 devolución';
   assert (select retencion from v_pl_quinta where trabajador_id = dani and periodo = '2026-09-01') = 0, 'R-122 mes de cese sin quinta';
   select * into r from v_liquidacion where trabajador_id = dani;
-  assert r.neto = 11471.81, format('R-120 neto liquidación %s', r.neto);
+  assert r.neto = 11471.80, format('R-120 neto liquidación %s', r.neto);
   assert r.fecha_limite_pago = '2026-10-02', 'R-120 48 horas';
   -- ELI (renuncia): sin indemnización; vacaciones pendientes, vencidas y truncas
   assert not exists (select 1 from v_liquidacion_linea where trabajador_id = eli and concepto = 'INDEM_DESPIDO'), 'R-121 renuncia no indemniza';

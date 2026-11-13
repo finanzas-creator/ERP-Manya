@@ -6,7 +6,7 @@ import { Boton } from '../../components/ui'
 import { Icono } from '../../components/iconos'
 import { PENSION, s2 } from './comun'
 
-export type LineaBoleta = { concepto: string | null; nombre: string | null; tipo: string | null; cantidad: number | null; monto: number | null }
+export type LineaBoleta = { concepto: string | null; nombre: string | null; tipo: string | null; plame?: string | null; cantidad: number | null; monto: number | null }
 export type CabeceraBoleta = {
   apellidos_nombres: string | null; tipo_documento: string | null; numero_documento: string | null; cargo: string | null
   fecha_ingreso: string | null; fecha_cese: string | null; regimen: string | null; sistema_pension: string | null
@@ -16,72 +16,64 @@ export type CabeceraBoleta = {
 }
 export type EmpleadorBoleta = { razon_social: string | null; ruc: string | null; direccion: string | null }
 
-function Columna({ titulo, lineas, total }: { titulo: string; lineas: LineaBoleta[]; total: number }) {
+const celda = 'border border-black/30 px-1.5 py-0.5'
+
+/** Boleta de pago (D.S. 001-98-TR) con el formato de HoldingD: datos del trabajador, días y una tabla
+ *  de conceptos con su código PLAME en columnas de ingresos, descuentos y aportes del empleador. */
+export function Boleta({ empleador, periodo, c, lineas, borrador, titulo = 'Boleta de pago', copia }:
+  { empleador: EmpleadorBoleta | null | undefined; periodo: string; c: CabeceraBoleta; lineas: LineaBoleta[]; borrador?: boolean; titulo?: string; copia?: string }) {
+  const suma = (t: string) => lineas.filter((l) => l.tipo === t).reduce((a, l) => a + (l.monto ?? 0), 0)
+  const he = lineas.filter((l) => l.concepto === 'HE25' || l.concepto === 'HE35')
+  const horas = (cod: string) => Number(lineas.find((l) => l.concepto === cod)?.cantidad ?? 0)
+  const pension = c.sistema_pension === 'afp' ? (c.afp ?? 'AFP').toUpperCase() : PENSION[c.sistema_pension ?? ''] ?? '—'
+  const dato = (k: string, v: ReactNode) => <td className={celda}><div className="text-[10px] font-semibold uppercase text-black/60">{k}</div><div>{v ?? '—'}</div></td>
   return (
-    <div className="min-w-0 flex-1 border border-black/20">
-      <div className="border-b border-black/20 bg-black/5 px-2 py-1 text-xs font-semibold uppercase">{titulo}</div>
-      <table className="w-full text-xs">
+    <div className="bg-white p-3 text-[12px] text-black">
+      {borrador && <div className="mb-2 rounded border border-red-600/40 bg-red-50 py-0.5 text-center text-[11px] font-bold tracking-wider text-red-700">BORRADOR · se emite al cerrar la planilla</div>}
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-[11px] leading-snug">
+          <div><b>Empresa:</b> {empleador?.razon_social}</div>
+          {empleador?.direccion && <div><b>Domicilio:</b> {empleador.direccion}</div>}
+          <div><b>RUC:</b> {empleador?.ruc ?? '—'}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-bold uppercase">{titulo}</div>
+          <div className="text-[11px]">Periodo: {mesLargo(periodo)}</div>
+          {copia && <div className="text-[10px] text-black/60">{copia}</div>}
+        </div>
+      </div>
+      <table className="mt-2 w-full border-collapse text-[11px]">
+        <tbody>
+          <tr>{dato(c.tipo_documento ?? 'DNI', c.numero_documento)}<td className={celda} colSpan={3}><div className="text-[10px] font-semibold uppercase text-black/60">Apellidos y nombres</div><b>{c.apellidos_nombres}</b></td>{dato('Sueldo básico', s2(c.sueldo_basico))}</tr>
+          <tr>{dato('Cargo', c.cargo)}{dato('Régimen pensionario', pension)}{dato('CUSPP', c.sistema_pension === 'afp' ? c.cuspp : '—')}{dato('Fecha ingreso', fecha(c.fecha_ingreso))}{dato('Fecha cese', c.fecha_cese ? fecha(c.fecha_cese) : '—')}</tr>
+          <tr>{dato('Días trabajados', c.dias_sueldo)}{dato('H. ordinarias', (c.dias_sueldo ?? 0) * 8)}{dato('Días subsidiados', c.dias_subsidiados ?? 0)}{dato('Faltas', c.dias_no_pagados ?? 0)}{dato('Categoría', ESTADOS[c.regimen ?? '']?.label ?? c.regimen)}</tr>
+          <tr>{dato('Días vacaciones', c.dias_vacaciones ?? 0)}{dato('H.E. al 25%', horas('HE25'))}{dato('H.E. al 35%', horas('HE35'))}{dato('Feriados lab.', horas('FERIADO'))}<td className={celda} /></tr>
+        </tbody>
+      </table>
+      <table className="mt-2 w-full border-collapse text-[11px]">
+        <thead><tr className="bg-black/5 text-[10px] uppercase">
+          <th className={`${celda} w-12 text-left`}>Cód.</th><th className={`${celda} text-left`}>Conceptos</th>
+          <th className={`${celda} w-24 text-right`}>Ingresos</th><th className={`${celda} w-24 text-right`}>Descuentos</th><th className={`${celda} w-24 text-right`}>Aportes empleador</th>
+        </tr></thead>
         <tbody>
           {lineas.map((l) => (
             <tr key={l.concepto}>
-              <td className="px-2 py-0.5">{l.nombre}{l.cantidad != null && l.cantidad > 0 && <span className="text-black/50"> ({Number(l.cantidad)})</span>}</td>
-              <td className="num px-2 py-0.5 text-right">{s2(l.monto)}</td>
+              <td className={`${celda} text-black/60`}>{l.plame ?? ''}</td>
+              <td className={celda}>{l.nombre}{l.cantidad != null && Number(l.cantidad) > 0 && !he.includes(l) && <span className="text-black/50"> ({Number(l.cantidad)})</span>}</td>
+              <td className={`${celda} num text-right`}>{l.tipo === 'ingreso' ? s2(l.monto) : ''}</td>
+              <td className={`${celda} num text-right`}>{l.tipo === 'descuento' ? s2(l.monto) : ''}</td>
+              <td className={`${celda} num text-right`}>{l.tipo === 'aporte' ? s2(l.monto) : ''}</td>
             </tr>
           ))}
-          {lineas.length === 0 && <tr><td className="px-2 py-1 text-black/40">—</td></tr>}
+          <tr className="font-semibold"><td className={celda} /><td className={celda}>Importe total</td>
+            <td className={`${celda} num text-right`}>{s2(suma('ingreso'))}</td><td className={`${celda} num text-right`}>{s2(suma('descuento'))}</td><td className={`${celda} num text-right`}>{s2(suma('aporte'))}</td></tr>
+          <tr className="font-bold"><td className={celda} /><td className={celda}>Neto a pagar en S/</td><td className={celda} />
+            <td className={`${celda} num text-right`}>{s2(suma('ingreso') - suma('descuento'))}</td><td className={celda} /></tr>
         </tbody>
-        <tfoot><tr className="border-t border-black/20 font-semibold"><td className="px-2 py-1">Total</td><td className="num px-2 py-1 text-right">{s2(total)}</td></tr></tfoot>
       </table>
-    </div>
-  )
-}
-
-/** Boleta de pago (DS 001-98-TR): empleador, trabajador, ingresos, descuentos, aportes y neto. */
-export function Boleta({ empleador, periodo, c, lineas, borrador, titulo = 'Boleta de pago' }:
-  { empleador: EmpleadorBoleta | null | undefined; periodo: string; c: CabeceraBoleta; lineas: LineaBoleta[]; borrador?: boolean; titulo?: string }) {
-  const de = (t: string) => lineas.filter((l) => l.tipo === t)
-  const suma = (t: string) => de(t).reduce((a, l) => a + (l.monto ?? 0), 0)
-  const dato = (k: string, v: ReactNode) => <div><span className="text-black/50">{k}: </span>{v ?? '—'}</div>
-  return (
-    <div className="relative rounded-lg border border-black/20 bg-white p-4 text-[13px] text-black">
-      {borrador && <div className="-mx-4 -mt-4 mb-3 rounded-t-lg border-b border-red-600/40 bg-red-50 px-4 py-1 text-center text-xs font-bold tracking-wider text-red-700">BORRADOR · se emite al cerrar la planilla</div>}
-      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-black/20 pb-2">
-        <div>
-          <div className="font-bold">{empleador?.razon_social}</div>
-          <div className="text-xs">RUC {empleador?.ruc ?? '—'}{empleador?.direccion ? ` · ${empleador.direccion}` : ''}</div>
-        </div>
-        <div className="text-right">
-          <div className="font-bold uppercase">{titulo}</div>
-          <div className="text-xs">Periodo: {mesLargo(periodo)}</div>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-x-4 gap-y-0.5 py-2 text-xs sm:grid-cols-3">
-        {dato('Trabajador', <b>{c.apellidos_nombres}</b>)}
-        {dato(c.tipo_documento ?? 'Documento', c.numero_documento)}
-        {dato('Cargo', c.cargo)}
-        {dato('Ingreso', fecha(c.fecha_ingreso))}
-        {c.fecha_cese && dato('Cese', fecha(c.fecha_cese))}
-        {dato('Régimen', ESTADOS[c.regimen ?? '']?.label ?? c.regimen)}
-        {dato('Pensión', c.sistema_pension === 'afp' ? `${c.afp ?? 'AFP'} · CUSPP ${c.cuspp ?? '—'}` : PENSION[c.sistema_pension ?? ''])}
-        {dato('Sueldo básico', s2(c.sueldo_basico))}
-        {dato('Días del mes', c.dias_vinculo)}
-        {dato('Días laborados', c.dias_sueldo)}
-        {!!c.dias_no_pagados && dato('Días no laborados', c.dias_no_pagados)}
-        {!!c.dias_vacaciones && dato('Días de vacaciones', c.dias_vacaciones)}
-        {!!c.dias_subsidiados && dato('Días subsidiados', c.dias_subsidiados)}
-        {!!c.horas_extra && dato('Horas extra', c.horas_extra)}
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Columna titulo="Ingresos" lineas={de('ingreso')} total={suma('ingreso')} />
-        <Columna titulo="Descuentos" lineas={de('descuento')} total={suma('descuento')} />
-        <Columna titulo="Aportes del empleador" lineas={de('aporte')} total={suma('aporte')} />
-      </div>
-      <div className="mt-2 flex justify-end">
-        <div className="border border-black/30 px-3 py-1 font-bold">Neto a pagar: S/ {s2(suma('ingreso') - suma('descuento'))}</div>
-      </div>
-      <div className="mt-10 grid grid-cols-2 gap-10 text-center text-xs">
-        <div className="border-t border-black/40 pt-1">Empleador</div>
-        <div className="border-t border-black/40 pt-1">Trabajador</div>
+      <div className="mt-8 grid grid-cols-2 gap-10 text-center text-[11px]">
+        <div className="border-t border-black/50 pt-1">LA EMPRESA</div>
+        <div className="border-t border-black/50 pt-1">{c.apellidos_nombres}</div>
       </div>
     </div>
   )
