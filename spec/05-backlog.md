@@ -24,6 +24,8 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Generar plan de pagos para ventas que no lo tienen
 - ✅ Modalidad por venta (R-02, D-21) · ✅ elegirla al registrar la venta
 
+- ✅ Actualización automática desde el sheet cada hora, en una transacción y conservando lo que solo vive en el ERP (R-71)
+
 ## R2 · Facturación y cobranza
 - ✅ Emitir comprobante agrupando cuotas (detracción sugerida por R-22) · ✅ serie y número siguiente por empresa
 - ✅ Facturación: todos los comprobantes por empresa, mes y estado; detalle con cuotas, pagos, notas y archivos PDF/XML
@@ -63,7 +65,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ⬜ Archivos PLAME / AFPnet / T-Registro y pago masivo al banco
 - ⬜ Enviar el costo empresa de la planilla a "Planilla y gastos" (GP)
 - ⬜ Constancia de depósito CTS imprimible; préstamos con cronograma de cuotas
-- ⬜ Validar con el contador D-28, D-29, D-30 y cargar REMYPE, saldos de vacaciones y quinta previa reales
+- ✅ Criterios confirmados por el dueño de producto (D-29, D-30, D-31) · 🔄 HoldingD cargado como prueba con la planilla de octubre 2026 · ⬜ constancia REMYPE real
 - ⬜ Datos del trabajador con vigencia (asignación familiar, AFP/ONP, salud, jornada): hoy un cambio recalcula meses anteriores (las boletas emitidas no cambian y se marcan "difiere")
 - ⬜ Liquidación emitida como copia fiel (como la boleta); tope de 60 días de incapacidad para CTS; subsidio con el promedio de 12 meses
 - ⬜ Rendimiento: la planilla recalcula todo el historial (≈1 s con 40 personas); guardar resultados al cerrar si crece

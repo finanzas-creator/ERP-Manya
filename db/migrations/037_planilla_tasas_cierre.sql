@@ -1,4 +1,4 @@
--- 036 · Planillas: tasas AFP de la SBS automáticas (R-102) y cierre con boletas emitidas (R-123).
+-- 037 · Planillas: tasas AFP de la SBS automáticas (R-102) y cierre con boletas emitidas (R-123).
 
 -- ---------- Tasas AFP ----------
 -- Número como lo publica la SBS: "1,47", "12 732,70", "12,732.70".

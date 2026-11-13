@@ -1,4 +1,4 @@
--- 035 · Planillas: cálculo (R-100…R-124). Todo número de planilla sale de estas funciones y vistas.
+-- 036 · Planillas: cálculo (R-100…R-124). Todo número de planilla sale de estas funciones y vistas.
 -- Orden: utilidades de fechas → datos vigentes del trabajador → días del mes → líneas → bases →
 -- quinta → boleta → beneficios (grati, CTS, vacaciones) → provisiones → liquidación → observaciones.
 
@@ -183,7 +183,7 @@ select t.id, t.empleador_id, e.razon_social as empleador, t.codigo_externo, t.ti
        t.apellidos_nombres, t.cargo, t.fecha_ingreso, t.fecha_cese, t.motivo_cese, mc.nombre as motivo_cese_nombre,
        t.sistema_pension, t.afp_id, a.nombre as afp, t.comision_afp, t.cuspp, t.asignacion_familiar, t.salud,
        t.jornada_horas, t.regimen_pactado, t.fecha_nacimiento, t.fecha_fin_contrato, t.periodo_prueba_meses,
-       t.persona_id, t.banco, t.cuenta_sueldo, t.banco_cts, t.cuenta_cts, t.correo,
+       t.domiciliado, t.banco, t.cuenta_sueldo, t.banco_cts, t.cuenta_cts, t.correo,
        regimen_en(t.id, least(coalesce(t.fecha_cese, current_date), current_date)) as regimen,
        sueldo_en(t.id, least(coalesce(t.fecha_cese, current_date), current_date)) as sueldo_basico,
        case when t.fecha_cese is not null and t.fecha_cese < current_date then 'cesado' else 'activo' end as estado
@@ -646,8 +646,10 @@ with recursive b as (
   select p.trabajador_id, p.periodo, p.hasta, extract(month from p.periodo)::int as mes,
          p.quinta_ordinaria, p.quinta_extraordinaria, p.quinta_tasa_mensual, p.quinta_grati_proyectada, p.mes_cese,
          coalesce(q.renta, 0) as previa_renta, coalesce(q.ret, 0) as previa_ret, bo.retencion_quinta as retencion_emitida,
+         t.domiciliado,
          row_number() over (partition by p.trabajador_id, extract(year from p.periodo) order by p.periodo) as n
   from v_pl_base p
+  join trabajador t on t.id = p.trabajador_id
   left join (select trabajador_id, anio, sum(renta_bruta) as renta, sum(retencion) as ret
              from quinta_previa where anulado_en is null group by 1, 2) q
     on q.trabajador_id = p.trabajador_id and q.anio = extract(year from p.periodo)
@@ -655,22 +657,27 @@ with recursive b as (
 ),
 r as (
   select b.trabajador_id, b.periodo, b.n, b.mes, b.previa_renta + b.quinta_ordinaria + b.quinta_extraordinaria as acumulado,
-         pr.proyeccion, c.impuesto_anual, coalesce(b.retencion_emitida, c.retencion) as retencion, c.retencion as retencion_calculada,
-         (array_fill(0::numeric, array[12]))[1:b.mes - 1] || coalesce(b.retencion_emitida, c.retencion) || (array_fill(0::numeric, array[12]))[b.mes + 1:12] as retenido
+         pr.proyeccion, c.impuesto_anual, x.ret as retencion, c.retencion as retencion_calculada,
+         (array_fill(0::numeric, array[12]))[1:b.mes - 1] || x.ret || (array_fill(0::numeric, array[12]))[b.mes + 1:12] as retenido
   from b
   cross join lateral (select b.previa_renta + b.quinta_ordinaria + b.quinta_tasa_mensual * (12 - b.mes)
                              + b.quinta_grati_proyectada * ((b.mes < 7)::int + (b.mes < 12)::int) as proyeccion) pr
   cross join lateral quinta_calculo(b.mes, pr.proyeccion, b.quinta_extraordinaria, b.hasta, array_fill(0::numeric, array[12]), b.previa_ret, b.mes_cese) c
+  -- lo retenido en una boleta emitida es un hecho; un no domiciliado retiene 30% de lo del mes, sin proyección
+  cross join lateral (select coalesce(b.retencion_emitida, case when b.domiciliado then c.retencion
+                        else round(legal('quinta_no_domiciliado', b.hasta) * (b.quinta_ordinaria + b.quinta_extraordinaria), 2) end) as ret) x
   where b.n = 1
   union all
   select b.trabajador_id, b.periodo, b.n, b.mes, r.acumulado + b.quinta_ordinaria + b.quinta_extraordinaria,
-         pr.proyeccion, c.impuesto_anual, coalesce(b.retencion_emitida, c.retencion), c.retencion,
-         r.retenido[1:b.mes - 1] || coalesce(b.retencion_emitida, c.retencion) || r.retenido[b.mes + 1:12]
+         pr.proyeccion, c.impuesto_anual, x.ret, c.retencion,
+         r.retenido[1:b.mes - 1] || x.ret || r.retenido[b.mes + 1:12]
   from r
   join b on b.trabajador_id = r.trabajador_id and extract(year from b.periodo) = extract(year from r.periodo) and b.n = r.n + 1
   cross join lateral (select r.acumulado + b.quinta_ordinaria + b.quinta_tasa_mensual * (12 - b.mes)
                              + b.quinta_grati_proyectada * ((b.mes < 7)::int + (b.mes < 12)::int) as proyeccion) pr
   cross join lateral quinta_calculo(b.mes, pr.proyeccion, b.quinta_extraordinaria, b.hasta, r.retenido, b.previa_ret, b.mes_cese) c
+  cross join lateral (select coalesce(b.retencion_emitida, case when b.domiciliado then c.retencion
+                        else round(legal('quinta_no_domiciliado', b.hasta) * (b.quinta_ordinaria + b.quinta_extraordinaria), 2) end) as ret) x
 )
 select trabajador_id, periodo, proyeccion, impuesto_anual, retencion, retencion_calculada, retenido from r;
 
@@ -717,9 +724,9 @@ from (
   select q.trabajador_id, q.periodo, case when q.retencion < 0 then 'DEVOL_QUINTA' else 'QUINTA' end, null, abs(q.retencion)
   from v_pl_quinta q
   union all
-  -- R-112: EsSalud, mínimo la RMV por los días no subsidiados
+  -- R-112: EsSalud, mínimo la RMV del mes (D-31); un mes íntegramente subsidiado no aporta
   select b.trabajador_id, b.periodo, 'ESSALUD', null,
-         round(legal('essalud', b.hasta) * greatest(b.base_essalud, b.rmv * (b.dias_vinculo - b.dias_subsidiados) / 30), 2)
+         round(legal('essalud', b.hasta) * greatest(b.base_essalud, b.rmv), 2)
   from v_pl_base b join trabajador t on t.id = b.trabajador_id
   where t.salud in ('essalud', 'eps') and b.dias_vinculo > b.dias_subsidiados
 ) l
@@ -828,7 +835,7 @@ left join boleta bo on bo.trabajador_id = m.trabajador_id and bo.periodo = m.per
 create view v_liquidacion_linea with (security_invoker = true) as
 with ces as (
   select t.id as trabajador_id, t.empleador_id, t.fecha_cese, t.fecha_ingreso, t.motivo_cese, t.fecha_fin_contrato,
-         t.periodo_prueba_meses, t.sistema_pension, t.afp_id, t.comision_afp, t.fecha_nacimiento, t.salud, t.jornada_horas,
+         t.periodo_prueba_meses, t.sistema_pension, t.afp_id, t.comision_afp, t.fecha_nacimiento, t.salud, t.jornada_horas, t.domiciliado,
          regimen_en(t.id, t.fecha_cese) as regimen,
          remuneracion_computable(t.id, t.fecha_cese, (date_trunc('month', t.fecha_cese) - interval '1 month')::date) as computable
   from trabajador t join empleador e on e.id = t.empleador_id
@@ -886,9 +893,10 @@ bases as (
 -- R-122: impuesto sobre lo percibido en el año (sin proyección) menos lo retenido antes del cese
 quinta as (
   select c.trabajador_id,
-         impuesto_quinta(coalesce(qp.renta, 0) + coalesce(pb.renta, 0) + b.base_quinta
-                         - legal('quinta_deduccion_uit', c.fecha_cese) * legal('uit', c.fecha_cese), c.fecha_cese)
-         - coalesce(qp.ret, 0) - coalesce(pq.ret, 0) as diferencia
+         case when not c.domiciliado then legal('quinta_no_domiciliado', c.fecha_cese) * b.base_quinta
+              else impuesto_quinta(coalesce(qp.renta, 0) + coalesce(pb.renta, 0) + b.base_quinta
+                                   - legal('quinta_deduccion_uit', c.fecha_cese) * legal('uit', c.fecha_cese), c.fecha_cese)
+                   - coalesce(qp.ret, 0) - coalesce(pq.ret, 0) end as diferencia
   from ces c
   join bases b on b.trabajador_id = c.trabajador_id
   left join (select trabajador_id, anio, sum(renta_bruta) as renta, sum(retencion) as ret from quinta_previa

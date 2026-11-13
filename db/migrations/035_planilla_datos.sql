@@ -1,6 +1,6 @@
--- 034 · Planillas: parámetros legales, catálogos y datos que se registran (R-100…R-125).
+-- 035 · Planillas: parámetros legales, catálogos y datos que se registran (R-100…R-125).
 -- Aquí solo se guardan hechos (normas vigentes, tasas publicadas, lo que pasó con cada trabajador).
--- Todo lo demás (días, montos, bases, quinta, beneficios, liquidaciones) se calcula en 035.
+-- Todo lo demás (días, montos, bases, quinta, beneficios, liquidaciones) se calcula en 036.
 
 create type regimen_laboral as enum ('micro', 'pequena', 'general');      -- R-100
 create type sistema_pension as enum ('onp', 'afp', 'sin_sistema');        -- R-111
@@ -9,7 +9,8 @@ create type sistema_salud as enum ('essalud', 'eps', 'sis');              -- R-1
 create type tipo_concepto as enum ('ingreso', 'descuento', 'aporte');     -- R-110 (aporte = cargo del empleador)
 create type parametro_legal_tipo as enum (
   'rmv', 'uit', 'onp', 'essalud', 'asignacion_familiar', 'bonificacion_essalud', 'bonificacion_eps',
-  'quinta_deduccion_uit', 'prima_edad_maxima', 'descanso_medico_dias', 'jornada_minima_horas');
+  'quinta_deduccion_uit', 'prima_edad_maxima', 'descanso_medico_dias', 'jornada_minima_horas',
+  'quinta_no_domiciliado');
 
 -- ---------- Parámetros legales con vigencia (hechos: norma publicada) ----------
 create table parametro_legal (
@@ -49,6 +50,7 @@ insert into parametro_legal (parametro, vigente_desde, valor, norma, fuente_url)
   ('quinta_deduccion_uit', '2015-01-01', 7, 'TUO Ley del Impuesto a la Renta, art. 46', null),
   ('prima_edad_maxima', '2000-01-01', 65, 'TUO Ley del SPP: sin prima de seguro desde los 65 años', null),
   ('descanso_medico_dias', '2000-01-01', 20, 'Ley 26790: primeros 20 días de incapacidad a cargo del empleador', null),
+  ('quinta_no_domiciliado', '2015-01-01', 0.30, 'TUO LIR art. 54 inc. c y art. 76: no domiciliados, 30% sin deducciones', null),
   ('jornada_minima_horas', '2000-01-01', 4, 'Jornada mínima para CTS, vacaciones e indemnización: D.S. 001-97-TR art. 4, D.Leg. 713 art. 12, D.Leg. 728 art. 22', null);
 
 -- Tramos del impuesto de quinta categoría (en UIT).
@@ -126,7 +128,7 @@ create table tasa_afp (
   registrado_en         timestamptz not null default now(),
   primary key (periodo, afp_id)
 );
--- D-32: tabla SBS de devengue noviembre 2026, contrastada en la revisión anterior.
+-- D-33: tabla SBS de devengue noviembre 2026, contrastada en la revisión anterior.
 insert into tasa_afp (periodo, afp_id, aporte, prima, comision_flujo, comision_mixta, comision_saldo, remuneracion_maxima, fuente, sustento)
 select '2026-11-01', a.id, 0.10, 0.0137, x.flujo, 0, x.saldo, 12732.70, 'manual',
        'Tabla SBS "Comisiones y primas" devengue 2026-11, verificada el 12/11/2026 (paquete HoldingD v3)'
@@ -161,7 +163,7 @@ create table concepto_planilla (
   afecto_essalud         boolean not null default false,
   afecto_pension         boolean not null default false,
   afecto_quinta          boolean not null default false,
-  quinta_extraordinaria  boolean not null default false,        -- R-113 (D-28)
+  quinta_extraordinaria  boolean not null default false,        -- R-113 (D-29)
   computable             boolean not null default false,        -- integra la remuneración computable (R-115)
   variable               boolean not null default false,        -- solo si es regular: 3 de 6 meses
   cubierto_provision     boolean not null default false,        -- R-114: no suma al costo del mes
@@ -259,14 +261,13 @@ insert into motivo_cese values
   ('FALLECIMIENTO',       'Fallecimiento',                               false, 70),
   ('JUBILACION',          'Jubilación',                                  false, 80);
 
--- ---------- Empleadores (D-25) ----------
+-- ---------- Empleadores (D-26) ----------
 create table empleador (
   id                      smallint generated always as identity primary key,
   razon_social            text not null unique,
   ruc                     text unique check (ruc ~ '^\d{11}$'),
   nombre_comercial        text,
   direccion               text,
-  empresa_id              smallint unique references empresa,   -- si además emite comprobantes en el ERP
   inicio_planilla         mes not null,                         -- primer mes calculado en el sistema
   descuento_dominical     boolean not null default false,       -- R-109
   dias_laborables_semana  smallint not null default 6 check (dias_laborables_semana in (5, 6)),
@@ -295,7 +296,7 @@ create table trabajador (
   apellidos_nombres     text not null,
   fecha_nacimiento      date,
   cargo                 text,
-  persona_id            int references persona,               -- vínculo con costos (Planilla y gastos)
+  domiciliado           boolean not null default true,            -- R-113: no domiciliado retiene 30%
   fecha_ingreso         date not null,
   fecha_cese            date,
   motivo_cese           text references motivo_cese,
@@ -444,7 +445,7 @@ create table saldo_vacaciones_inicial (
   detalle         text
 );
 
--- ---------- Cierre de planilla y boletas emitidas (R-123, D-31) ----------
+-- ---------- Cierre de planilla y boletas emitidas (R-123, D-32) ----------
 create table planilla_cierre (
   empleador_id  smallint not null references empleador,
   periodo       mes not null,

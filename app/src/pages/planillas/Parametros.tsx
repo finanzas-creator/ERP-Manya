@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ok, supabase } from '../../lib/supabase'
 import { fecha, mesLargo, sumarMeses } from '../../lib/formato'
 import { useRol } from '../../lib/sesion'
-import { useEmpresas } from '../../lib/catalogos'
 import { ENUMS, type Fila } from '../../lib/db'
 import { ESTADOS } from '../../lib/estados'
 import { Boton, Campo, Card, Estado, Input, MensajeError, Modal, Nota, Pestanas, Select, Tabla } from '../../components/ui'
@@ -208,16 +207,15 @@ function Empleadores() {
 }
 
 function EmpleadorModal({ e, onCerrar }: { e: Fila<'empleador'> | null; onCerrar: () => void }) {
-  const empresas = useEmpresas()
   const [f, setF] = useState({ razon_social: e?.razon_social ?? '', ruc: e?.ruc ?? '', nombre_comercial: e?.nombre_comercial ?? '',
     direccion: e?.direccion ?? '', inicio: (e?.inicio_planilla ?? '').slice(0, 7), dominical: e?.descuento_dominical ?? false,
-    dias: String(e?.dias_laborables_semana ?? 6), empresa: e?.empresa_id ? String(e.empresa_id) : '' })
+    dias: String(e?.dias_laborables_semana ?? 6) })
   const set = (k: keyof typeof f) => (ev: { target: { value: string } }) => setF({ ...f, [k]: ev.target.value })
   const m = useGuardar(async () => {
     if (!f.razon_social.trim() || !f.inicio) throw new Error('Completa razón social y mes de inicio')
     const datos = { razon_social: f.razon_social.trim(), ruc: f.ruc.trim() || null, nombre_comercial: f.nombre_comercial || null,
       direccion: f.direccion || null, inicio_planilla: f.inicio + '-01', descuento_dominical: f.dominical,
-      dias_laborables_semana: Number(f.dias), empresa_id: f.empresa ? Number(f.empresa) : null }
+      dias_laborables_semana: Number(f.dias) }
     if (e) ok(await supabase.from('empleador').update(datos).eq('id', e.id))
     else ok(await supabase.from('empleador').insert(datos))
   }, onCerrar)
@@ -229,8 +227,6 @@ function EmpleadorModal({ e, onCerrar }: { e: Fila<'empleador'> | null; onCerrar
         <Campo label="Nombre comercial"><Input value={f.nombre_comercial} onChange={set('nombre_comercial')} /></Campo>
         <div className="sm:col-span-2"><Campo label="Dirección"><Input value={f.direccion} onChange={set('direccion')} /></Campo></div>
         <Campo label="Primer mes en el sistema"><Input type="month" value={f.inicio} onChange={set('inicio')} /></Campo>
-        <Campo label="Empresa emisora (si factura en el ERP)"><Select value={f.empresa} onChange={set('empresa')}>
-          <option value="">Ninguna</option>{empresas.data?.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</Select></Campo>
         <Campo label="Días laborables por semana"><Select value={f.dias} onChange={set('dias')}><option value="6">6</option><option value="5">5</option></Select></Campo>
         <label className="flex items-center gap-2 self-end pb-2 text-sm">
           <input type="checkbox" checked={f.dominical} onChange={(ev) => setF({ ...f, dominical: ev.target.checked })} />
@@ -291,7 +287,7 @@ function Conceptos() {
         { titulo: 'Variable', celda: (c) => marca(c, 'variable') },
         { titulo: 'Se registra', celda: (c) => c.manual ? 'Sí' : 'Sistema' },
       ]} />
-      <Nota>Cada cálculo lee estas marcas (R-110): cambiar una afectación (p. ej. lo que el contador confirme sobre subsidios u horas extra, D-28/D-29) cambia el cálculo sin tocar código. Queda en la bitácora.</Nota>
+      <Nota>Cada cálculo lee estas marcas (R-110): cambiar una afectación (p. ej. subsidios u horas extra, D-29/D-30) cambia el cálculo sin tocar código. Queda en la bitácora.</Nota>
     </Card>
   )
 }

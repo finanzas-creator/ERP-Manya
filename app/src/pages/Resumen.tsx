@@ -7,6 +7,7 @@ import { dinero, fecha, mesActual, mesLargo, pct, soles, sumarMeses, usd } from 
 import { puedeOperar, useRol } from '../lib/sesion'
 import { Barras, Card, Estado, Kpi, Nota, Panel, Renglon, Select, Tabla, Titulo } from '../components/ui'
 import type { Fila } from '../lib/db'
+import UltimaCarga from '../components/UltimaCarga'
 
 type Mes = Fila<'v_kpi_mes'>
 type Detalle = 'ventas' | 'ingresos' | 'gp' | 'cobrado' | 'facturado'
@@ -57,11 +58,12 @@ export default function Resumen() {
 
   return (
     <>
-      <Titulo accion={
+      <Titulo accion={<div className="flex items-center gap-3">
+        <UltimaCarga />
         <Select value={periodo} onChange={(e) => setElegido(e.target.value)} aria-label="Mes">
           {[...disponibles].reverse().map((p) => <option key={p} value={p}>{mesLargo(p)}</option>)}
         </Select>
-      }>Resumen</Titulo>
+      </div>}>Resumen</Titulo>
 
       {(k?.autodetracciones_pendientes ?? 0) > 0 && (
         <div onClick={opera ? () => navigate('/cobranza') : undefined}

@@ -362,3 +362,17 @@ begin
   raise exception 'debió rechazar';
 exception when others then assert sqlerrm like 'R-125%', sqlerrm;
 end $$;
+
+-- D-31: EsSalud con mínimo la RMV completa aunque el mes sea parcial; R-113: no domiciliado retiene 30%
+reset role;
+insert into trabajador (id, empleador_id, numero_documento, apellidos_nombres, fecha_ingreso, sistema_pension, domiciliado, tipo_documento)
+values ('00000000-0000-0000-0000-0000000001c1', (select id from empleador where ruc = '20000000001'), '10000021', 'KIKO (ingresa el 20)', '2026-03-20', 'onp', true, 'DNI'),
+       ('00000000-0000-0000-0000-0000000001c2', (select id from empleador where ruc = '20000000001'), '000000022', 'LUZ (no domiciliada)', '2026-01-01', 'onp', false, 'CE');
+insert into remuneracion (trabajador_id, vigente_desde, sueldo_basico) values
+  ('00000000-0000-0000-0000-0000000001c1', '2026-03-20', 1500), ('00000000-0000-0000-0000-0000000001c2', '2026-01-01', 2000);
+do $$
+begin
+  assert (select monto from v_boleta_linea where trabajador_id = '00000000-0000-0000-0000-0000000001c1' and periodo = '2026-03-01' and concepto = 'SUELDO') = 600.00, 'mes parcial';
+  assert (select monto from v_boleta_linea where trabajador_id = '00000000-0000-0000-0000-0000000001c1' and periodo = '2026-03-01' and concepto = 'ESSALUD') = 101.70, 'D-31 mínimo RMV completo';
+  assert (select retencion from v_pl_quinta where trabajador_id = '00000000-0000-0000-0000-0000000001c2' and periodo = '2026-01-01') = 600.00, 'R-113 no domiciliado 30%';
+end $$;

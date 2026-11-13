@@ -1,4 +1,4 @@
--- 037 · Planillas: anulación de novedades (R-81) y listas para las pantallas (sin cálculo nuevo).
+-- 038 · Planillas: anulación de novedades (R-81) y listas para las pantallas (sin cálculo nuevo).
 
 -- R-81: también se anulan, con motivo, los registros de planilla.
 create or replace function anular(p_tabla text, p_id uuid, p_motivo text) returns void language plpgsql as $$

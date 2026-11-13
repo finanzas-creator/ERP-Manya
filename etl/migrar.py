@@ -224,12 +224,16 @@ class Salida:
     def sql(self):
         return "".join(p if isinstance(p, str) else sql_copy(*p) for p in self.partes)
 
-    def lotes(self, max_bytes):
+    def lotes(self, max_bytes, esquema=None):
         """Sentencias INSERT agrupadas en lotes de ~max_bytes; cada lote es una transacción.
-        El primer lote deshabilita la auditoría y el último la rehabilita y ajusta secuencias."""
+        El primer lote deshabilita la auditoría y el último la rehabilita y ajusta secuencias.
+        Con `esquema` (R-71) solo van los INSERT, dirigidos a ese esquema: la auditoría, las secuencias
+        y el reemplazo de los datos los hace aplicar_carga() en una sola transacción."""
         sentencias = []
         for p in self.partes:
             if isinstance(p, str):
+                if esquema and not p.lstrip().lower().startswith("insert into"):
+                    continue
                 if p not in ("begin;\n", "commit;\n"):
                     sentencias.append(p)
                 continue
@@ -245,7 +249,8 @@ class Salida:
             tam += len(st)
         if actual:
             lotes.append(actual)
-        return ["begin;\n" + "".join(l) + "commit;\n" for l in lotes]
+        inicio = f"begin;\nset local search_path = {esquema}, public;\n" if esquema else "begin;\n"
+        return [inicio + "".join(l) + "commit;\n" for l in lotes]
 
 
 # ---------------------------------------------------------------- migración
@@ -751,9 +756,10 @@ LOTE_BYTES = 1_000_000
 
 
 def main():
-    # Uso: migrar.py <sheet.xlsx> <carpeta> [--inserts]
+    # Uso: migrar.py <sheet.xlsx> <carpeta> [--inserts] [--carga]
     # --inserts: además escribe <carpeta>/lotes/NNN.sql (INSERT por lotes, sin COPY) para cargar
     # por la API de consultas de Supabase; se aplican en orden.
+    # --carga: los lotes van al esquema `carga` (R-71); luego se llama aplicar_carga().
     origen, carpeta = sys.argv[1], sys.argv[2]
     os.makedirs(carpeta, exist_ok=True)
     hojas = leer(origen)
@@ -765,7 +771,7 @@ def main():
         os.makedirs(dir_lotes, exist_ok=True)
         for viejo in os.listdir(dir_lotes):
             os.remove(os.path.join(dir_lotes, viejo))
-        lotes = S.lotes(LOTE_BYTES)
+        lotes = S.lotes(LOTE_BYTES, esquema="carga" if "--carga" in sys.argv[3:] else None)
         for i, lote in enumerate(lotes, 1):
             with open(os.path.join(dir_lotes, f"{i:03d}.sql"), "w") as f:
                 f.write(lote)

@@ -73,6 +73,7 @@ como *(config)* se cambian en Configuración, no en el código.
 
 ## Cierre, seguridad y trazabilidad
 - **R-70** El cierre mensual bloquea la creación y modificación de registros de ese mes y fija su TC.
+- **R-71** **Actualización desde el sheet** (mientras el sheet administrativo sea la fuente): el ERP se recarga desde el sheet automáticamente, en una sola transacción; si algo falla, nada cambia y el error queda en la bitácora de cargas. Se conserva lo que **solo vive en el ERP**: datos fiscales de las empresas, N° de cuenta y CCI, activo/inactivo de cuentas, RUC y datos fiscales de los clientes, marcas agregadas, gestiones de cobranza, autodetracciones registradas y sus constancias, archivos PDF/XML de comprobantes, notas de crédito y el TC de los meses que el sheet no tiene. Lo demás (contratos, cuotas, comprobantes, pagos, planilla, herramientas, comisiones, catálogos) se registra **en el sheet**. No se aplica una carga que trae más de 2% *(config)* menos clientes, ventas, comprobantes, cuotas o pagos que los que hay. La app muestra la hora de la última carga.
 - **R-80** Roles: **Administrador** (todo, incluida configuración), **Tesorería** (clientes, ventas, cuotas, comprobantes, pagos y costos), **CEO** (solo lectura de KPIs).
 - **R-81** Nada se borra: se anula con motivo. Lo anulado no suma en ningún cálculo.
 - **R-82** Todo cambio queda en la bitácora: quién, cuándo, valor anterior y nuevo.
@@ -134,8 +135,9 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   base con tope en la remuneración máxima asegurable (no paga prima quien tiene más de 65 años) +
   comisión sobre flujo (afiliados a flujo) o comisión mixta (afiliados a mixta), con las tasas del
   periodo (R-102).
-- **R-112** **EsSalud** (cargo del empleador): 9% de la base afecta, con mínimo la RMV en
-  proporción a los días no subsidiados. EPS: se muestra el 9% (el crédito EPS se concilia aparte).
+- **R-112** **EsSalud** (cargo del empleador): 9% de la base afecta (sueldo, vacaciones, horas
+  extra…), con mínimo la RMV completa del mes (D-31); un mes íntegramente subsidiado no aporta. EPS:
+  se muestra el 9% (el crédito EPS se concilia aparte).
 - **R-113** **Quinta categoría** (procedimiento SUNAT, art. 40 del reglamento): renta proyectada =
   ingresos afectos de meses anteriores (de este empleador y de otros, o anteriores al sistema,
   según certificado) + ingresos ordinarios del mes + remuneración ordinaria mensual × meses que
@@ -144,6 +146,8 @@ guardan una vez con su norma y el cálculo toma el vigente en cada fecha; nunca 
   may–jul (− ene–abr) ÷8; ago (− ene–jul) ÷5; set–nov (− ene–ago) ÷4; dic = impuesto − retenido
   ene–nov. Los ingresos extraordinarios del mes (horas extra, bonos no regulares) suman la
   diferencia de impuesto que generan. Lo retenido en meses cerrados es el de su boleta emitida.
+  Un trabajador **no domiciliado** retiene 30% de sus ingresos afectos de cada mes, sin deducciones
+  ni proyección *(parámetro `quinta_no_domiciliado`)*.
 - **R-114** **Neto a pagar** = ingresos − descuentos (pensión, quinta, adelantos, préstamos,
   descuentos autorizados). **Costo empresa** = ingresos (salvo los cubiertos por provisión:
   gratificación, bonificación y remuneración vacacional) + EsSalud + provisiones del mes (R-118).
