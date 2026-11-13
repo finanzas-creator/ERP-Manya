@@ -4,7 +4,7 @@ POSTGREST ?= postgrest
 export PGUSER ?= root
 export PGHOST ?= /var/run/postgresql
 
-.PHONY: db migrate-data test test-reglas test-doradas app api dev-users publicar-app demo-planilla
+.PHONY: db migrate-data test test-reglas test-doradas app api dev-users publicar-app
 
 db:
 	dropdb --force --if-exists $(DB) && createdb $(DB)
@@ -26,10 +26,6 @@ test-doradas:
 
 dev-users:
 	$(PSQL) -d $(DB) -f db/local/usuarios_dev.sql
-
-# Datos ficticios para ver Planillas en local (después de make db).
-demo-planilla:
-	$(PSQL) -d $(DB) -f db/local/planilla_demo.sql
 
 api:
 	$(POSTGREST) db/local/postgrest.conf

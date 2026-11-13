@@ -234,11 +234,11 @@ export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input {...p}
 export const Select = (p: SelectHTMLAttributes<HTMLSelectElement>) => <select {...p} className={`${inputCls} ${p.className ?? ''}`} />
 CONTROLES.push(Input, Select)
 
-export function Modal({ titulo, onCerrar, children, ancho = 'normal' }: { titulo: string; onCerrar: () => void; children: ReactNode; ancho?: 'normal' | 'amplio' }) {
+export function Modal({ titulo, onCerrar, children }: { titulo: string; onCerrar: () => void; children: ReactNode }) {
   useCerrarConEscape(onCerrar)
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={onCerrar}>
-      <div className={`max-h-[90vh] w-full ${ancho === 'amplio' ? 'max-w-4xl' : 'max-w-lg'} overflow-y-auto rounded-xl border border-line bg-s1 shadow-xl`}
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-s1 shadow-xl"
         onClick={(e) => e.stopPropagation()} role="dialog" aria-label={titulo}>
         <header className="flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold">{titulo}</h2>

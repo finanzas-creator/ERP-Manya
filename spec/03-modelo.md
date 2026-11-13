@@ -29,18 +29,6 @@ OPERACIÓN (registra tesorería)
 COSTOS
   planilla (persona, sub-área, equipo, costo) · herramienta_gasto · comision_pago
 
-PLANILLAS (por empleador; ver R-100…R-125)
-  parametro_legal (RMV, UIT, ONP, EsSalud… con vigencia y norma) · tramo_quinta · regimen_derecho
-  afp · tasa_afp (periodo de devengue, fuente SBS o manual) · feriado
-  concepto_planilla (afectaciones) · tipo_ausencia · motivo_cese
-  empleador (+ empresa emisora opcional) ─< empleador_remype (categoría y desde cuándo)
-    └─< trabajador (documento, ingreso, cese y motivo, pensión, CUSPP, salud, jornada, régimen pactado)
-          ├─< remuneracion (sueldo básico con vigencia) · concepto_fijo (bonos fijos, movilidad)
-          ├─< ausencia (tipo, desde, hasta) · asistencia_dia (horas extra, feriado trabajado, tardanza)
-          ├─< movimiento (mes, concepto, monto: bonos, comisiones, adelantos, descuentos)
-          └── quinta_previa (rentas y retenciones de otros empleadores) · saldo_vacaciones_inicial
-  planilla_cierre (empleador, mes) ─< boleta (copia fiel emitida, entrega)
-
 CONTROL
   usuario (rol) · auditoria · cierre_mensual
   referencia_sheet (totales que reportaba el sheet al migrar: un hecho, para validar)
@@ -77,23 +65,6 @@ CONTROL
 | `v_cobranza_cliente` | Cartera por cliente ("¿Quién nos debe?"): por cobrar, vencido, mayor atraso, gestión | R-37 |
 | `v_cliente` | Ficha del cliente: servicios activos, ventas 12 meses, por cobrar, vencido | R-33, R-52 |
 | `v_kpi_mes`, `v_kpi_hoy`, `v_kpi_linea_mes`, `v_kpi_gp_mes`, `v_kpi_ingresos_mes`, `v_kpi_ventas_categoria_mes`, `v_kpi_ventas_cliente_mes`, `v_kpi_pauta_mes` | Indicadores de lectura para los tres roles (el CEO no lee tablas operativas) | R-80 |
-
-### Planillas
-
-| Vista | Responde | Reglas |
-|---|---|---|
-| `v_trabajador` | Trabajador con régimen del día, sueldo vigente y estado | R-100, R-101 |
-| `v_tasa_afp_periodo` | Tasas AFP que usa cada mes (exactas o provisionales) | R-102 |
-| `v_pl_mes` | Cada trabajador y mes: vínculo, días por tipo, sueldo, horas extra | R-103–R-109 |
-| `v_pl_linea` | Ingresos y descuentos de cada trabajador y mes (con sus afectaciones) | R-105–R-110, R-116 |
-| `v_pl_base` → `v_pl_quinta` | Bases afectas y retención de quinta mes a mes | R-110, R-113 |
-| `v_boleta_linea` · `v_planilla` · `v_planilla_resumen` | Boleta completa, neto, EsSalud, costo; totales por empleador y mes | R-111–R-114 |
-| `v_gratificacion` · `v_cts` | Cada semestre: computable, meses/días, monto, bonificación, pago o trunca | R-115–R-117 |
-| `v_provision_mes` | Provisión de grati, bonificación, CTS y vacaciones por devengado | R-118 |
-| `v_vacacion_periodo` · `v_vacaciones` | Periodos ganados, gozados, pendientes, vencidos, adelantos y truncas | R-119 |
-| `v_liquidacion_linea` · `v_liquidacion` | Liquidación de beneficios de cada cese | R-120–R-122 |
-| `v_pl_observacion` | Lo que falta revisar antes de cerrar | R-102, R-124 |
-| `v_ausencia` · `v_asistencia_dia` · `v_movimiento` · `v_concepto_fijo` | Novedades con nombres, para las pantallas (sin cálculo) | R-104 |
 
 ## Equivalencias con el sheet
 

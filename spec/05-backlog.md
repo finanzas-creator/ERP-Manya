@@ -54,22 +54,6 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Dashboard: ventas, ingresos, recurrente, facturado, cobrado, GP, margen, cartera en dos miradas, ventas por categoría, top clientes, estructura de costos; cada tarjeta muestra cómo se calcula
 - ✅ Cobros esperados 13 semanas (Cobranza), DSO y concentración top 5 (Resumen) · ✅ retención de clientes y clientes caídos (R-53, R-54) · ✅ evolución de ventas desde 2021 · ⬜ proyección que incluya renovaciones aún no registradas
 
-## R5 · Planillas (HoldingD y entidades MYPE)
-- ✅ Spec R-100…R-125 · ✅ empleadores con REMYPE y régimen por trabajador
-- ✅ Planilla del mes: sueldo, asignación familiar, vacaciones, horas extra 25/35, feriados, faltas, tardanzas, bonos, adelantos
-- ✅ AFP/ONP/EsSalud con tasas SBS del periodo · ✅ quinta con proyección SUNAT · 🔄 lectura automática de la SBS: bloqueada por su protección anti-bots (nov 2026); se registran a mano cada mes (4 filas) hasta tener una fuente que lo permita
-- ✅ Gratificación y bonificación (julio/diciembre), CTS (mayo/noviembre), provisiones por devengado, vacaciones con adelantos y vencidas
-- ✅ Liquidación con CTS/grati/vacaciones truncas e indemnización por régimen y causal
-- ✅ Cierre con boletas emitidas e imprimibles
-- ✅ API de integración con el ERP de control de personal por código externo (R-126) y rol Recursos humanos · ⬜ conectar el ERP de personal (área de sistemas; guía en docs/planillas-integracion.md)
-- ⬜ Archivos PLAME / AFPnet / T-Registro y pago masivo al banco
-- ⬜ Enviar el costo empresa de la planilla a "Planilla y gastos" (GP)
-- ⬜ Constancia de depósito CTS imprimible; préstamos con cronograma de cuotas
-- ✅ Criterios confirmados por el dueño de producto (D-29, D-30, D-31) · 🔄 HoldingD cargado como prueba con la planilla de octubre 2026 · ⬜ constancia REMYPE real
-- ⬜ Datos del trabajador con vigencia (asignación familiar, AFP/ONP, salud, jornada): hoy un cambio recalcula meses anteriores (las boletas emitidas no cambian y se marcan "difiere")
-- ⬜ Liquidación emitida como copia fiel (como la boleta); tope de 60 días de incapacidad para CTS; subsidio con el promedio de 12 meses
-- ⬜ Rendimiento: la planilla recalcula todo el historial (≈1 s con 40 personas); guardar resultados al cerrar si crece
-
 ## Después
 - ⬜ Integración SUNAT API SIRE (RVIE): importar comprobantes emitidos de ambas empresas
 - ⬜ Reclasificación del catálogo a la taxonomía BD_MAD
