@@ -16,6 +16,8 @@
   const completar = (e) => { const v = vacio(); for (const k in v) if (e[k] == null) e[k] = v[k]; e.parametros.tasas_afp ||= []; e.parametros.legales ||= []; return e }
   let estado = vacio(), ui = { tab: 'planilla', empleador: null, periodo: null, sub: 'grati', modal: null }, M, avisoGuardado = null
   try { const s = localStorage.getItem(CLAVE); if (s) estado = completar(JSON.parse(s)) } catch { avisoGuardado = 'Este navegador no permite guardar: exporta un respaldo antes de cerrar.' }
+  // Versión entregada con datos (construir.js --datos): si este navegador aún no tiene empleadores, parte de esos datos
+  if (!estado.empleadores.length && window.PLANILLA_ESTADO_INICIAL) estado = completar(JSON.parse(JSON.stringify(window.PLANILLA_ESTADO_INICIAL)))
   try { const u = JSON.parse(localStorage.getItem(CLAVE_UI) || '{}'); ui = { ...ui, ...u, modal: null } } catch { /* sin preferencias */ }
   const nuevoId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2))
   function guardar(accion) {
