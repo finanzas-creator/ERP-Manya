@@ -58,7 +58,7 @@ def hojas_de(doc):
 def main(carpeta, salida):
     hojas = collections.defaultdict(dict)   # titulo -> {fila: [valores]}
     for f in sorted(glob.glob(os.path.join(carpeta, "*.json"))):
-        for s in hojas_de(json.load(open(f, encoding="utf-8"))):
+        for s in hojas_de(json.load(open(f, encoding="utf-8"))) or []:  # plan.json u otros: sin hojas
             t = s["properties"]["title"]
             for d in s.get("data", []):
                 r0, c0 = d.get("startRow", 0), d.get("startColumn", 0)
