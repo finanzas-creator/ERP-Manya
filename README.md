@@ -47,7 +47,8 @@ Postgres: todo se envía por la Management API con `db/supabase.py` y la variabl
    3. `python3 etl/sincronizar.py verificar etl/out/grid` (si falta algo, dice qué leer).
    4. `python3 etl/sincronizar.py armar etl/out/grid` → `data/sheet.xlsx` y los lotes.
    5. `python3 etl/sincronizar.py cargar --revision "<modifiedTime del sheet en Drive>"`.
-   La tarea programada hace esto cada hora (D-25); `python3 etl/sincronizar.py ultima` dice
+   La tarea programada (sesión "Manya ERP · actualización automática desde el sheet", cada hora de
+   7:00 a 21:00, lunes a sábado, hora de Lima) hace esto (D-25); `python3 etl/sincronizar.py ultima` dice
    la revisión de la última carga para no recargar si el sheet no cambió. Para revisar a
    fondo, en local: `make db && make migrate-data && make test`.
 3. **Usuarios:** invitarlos en Auth y registrar su fila en `usuario` con el mismo id y su rol.
