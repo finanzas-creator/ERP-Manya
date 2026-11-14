@@ -14,7 +14,8 @@ begin
   update cliente set ruc = '20123456789', correo_facturacion = 'pagos@uno.pe' where id = '00000000-0000-0000-0000-0000000000c1';
   insert into gestion_cobranza (cliente_id, fecha, tipo_id, detalle) values ('00000000-0000-0000-0000-0000000000c1', '2026-02-01', 1, 'Llamada');
   update comprobante set autodetraccion_operacion = 'OP-9' where id = '00000000-0000-0000-0000-0000000000f1';
-  insert into tipo_cambio_mensual (periodo, tc, fuente) values ('2026-04-01', 3.6, 'sunat');
+  insert into tipo_cambio_mensual (periodo, tc, fuente) values ('2026-04-01', 3.6, 'sunat'), ('2026-05-01', 3.9, null);
+  insert into tipo_cambio_sunat (fecha, compra, venta) values ('2026-05-10', 3.68, 3.70), ('2026-05-20', 3.69, 3.71);
 
   -- una carga con muchas menos ventas que hoy se rechaza y no cambia nada
   begin
@@ -33,6 +34,7 @@ begin
   assert (select count(*) from gestion_cobranza) = 1, 'R-71 gestiones de cobranza';
   assert (select autodetraccion_operacion from comprobante where id = '00000000-0000-0000-0000-0000000000f1') = 'OP-9', 'R-71 autodetracción';
   assert (select tc from tipo_cambio_mensual where periodo = '2026-04-01') = 3.6, 'R-71 TC que el sheet no tiene';
+  assert (select tc || fuente from tipo_cambio_mensual where periodo = '2026-05-01') = '3.710000sunat', 'D-14 mes sin TC del sheet: último TC SUNAT del mes';
   assert to_regnamespace('carga') is null, 'R-71 el esquema de carga se borra';
   assert (select resultado from carga_sheet order by id desc limit 1) = 'ok', 'R-71 bitácora de cargas';
 end $$;

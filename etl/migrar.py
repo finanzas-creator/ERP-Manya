@@ -392,7 +392,8 @@ def migrar(hojas):
                  [(i + 1, nombre, grupo, lin_id[linea] if linea else None)], identidad=True)
     S.insert("peso_direccion", ["linea_id", "peso"], [(lin_id[l], p) for l, p in PESOS_DIRECCION.items()])
 
-    # --- tipo de cambio mensual: mediana del TC de los pagos en soles del mes
+    # --- tipo de cambio mensual: mediana del TC de los pagos en soles del mes, solo hasta TC_SHEET_HASTA
+    # (D-14: desde entonces el TC del mes es el de SUNAT, que la base toma sola cada día)
     tcs = collections.defaultdict(list)
     for _, r in pagos:
         f, tc, b = fecha(r[1]), num(r[3]), txt(r[5])
@@ -400,6 +401,8 @@ def migrar(hojas):
             tcs[mes(f)].append(tc)
     filas_tc = []
     for m, lst in sorted(tcs.items()):
+        if m > TC_SHEET_HASTA:
+            continue
         lst.sort()
         filas_tc.append((m.isoformat(), round(lst[len(lst) // 2], 6)))
     S.insert("tipo_cambio_mensual", ["periodo", "tc"], filas_tc)
@@ -753,6 +756,7 @@ def migrar(hojas):
 
 
 LOTE_BYTES = 1_000_000
+TC_SHEET_HASTA = dt.date(2026, 10, 1)  # D-14: último mes con TC tomado del sheet
 
 
 def main():

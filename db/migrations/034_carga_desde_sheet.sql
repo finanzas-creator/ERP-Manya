@@ -103,9 +103,15 @@ begin
   where exists (select 1 from public.cliente c where c.id = g.cliente_id);
   insert into public.nota_credito select * from g_nota g
   where exists (select 1 from public.comprobante c where c.id = g.comprobante_id);
-  -- el TC de los meses que el sheet no tiene (D-14: los automáticos de SUNAT)
+  -- D-14: el TC de los meses que el sheet no trae es el de SUNAT (o el corregido a mano): se conserva
+  -- el que había si tenía fuente, y si no, el último TC venta SUNAT publicado en ese mes.
   insert into public.tipo_cambio_mensual select * from g_tc g
-  where not exists (select 1 from public.tipo_cambio_mensual x where x.periodo = g.periodo);
+  where g.fuente is not null and not exists (select 1 from public.tipo_cambio_mensual x where x.periodo = g.periodo);
+  insert into public.tipo_cambio_mensual (periodo, tc, fuente)
+  select distinct on (date_trunc('month', s.fecha)) date_trunc('month', s.fecha)::date, s.venta, 'sunat'
+  from tipo_cambio_sunat s
+  where not exists (select 1 from public.tipo_cambio_mensual x where x.periodo = date_trunc('month', s.fecha)::date)
+  order by date_trunc('month', s.fecha), s.fecha desc;
 
   -- 5) secuencias y bitácora otra vez activas
   for t in select c.table_name from information_schema.columns c

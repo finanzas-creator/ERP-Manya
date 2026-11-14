@@ -60,7 +60,7 @@ def tamanos_previos():
     try:
         r = q("select filas -> 'sheet' as s from carga_sheet where resultado = 'ok' and filas ? 'sheet' order by id desc limit 1")
         return (r[0]["s"] or {}) if r else {}
-    except Exception:  # noqa: BLE001 — sin conexión se usan los tamaños por defecto
+    except (Exception, SystemExit):  # noqa: BLE001 — sin conexión o sin bitácora: tamaños por defecto
         return {}
 
 
