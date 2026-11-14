@@ -66,8 +66,26 @@
   }
 
   // ---------------------------------------------------------------- Render principal
-  const TABS = [['planilla', 'Planilla del mes'], ['novedades', 'Novedades'], ['trabajadores', 'Trabajadores'], ['beneficios', 'Beneficios'],
-    ['liquidaciones', 'Liquidaciones'], ['parametros', 'Parámetros'], ['datos', 'Datos']]
+  // [clave, nombre, nombre corto (celular), va en la barra inferior del celular]
+  const TABS = [['planilla', 'Planilla del mes', 'Planilla', true], ['novedades', 'Novedades', 'Novedades', true], ['trabajadores', 'Trabajadores', 'Personal', true],
+    ['beneficios', 'Beneficios', 'Beneficios', true], ['liquidaciones', 'Liquidaciones', 'Liquidaciones', false], ['parametros', 'Parámetros', 'Parámetros', false],
+    ['datos', 'Datos y respaldo', 'Datos', false]]
+  const ICONO = {
+    planilla: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+    novedades: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    trabajadores: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.2 2.5 3.6 5.2"/>',
+    beneficios: '<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 13h18M12 8C10 4 6 4 6 6.5S10 8 12 8zm0 0c2-4 6-4 6-1.5S14 8 12 8z"/>',
+    liquidaciones: '<path d="M14 4H5v16h9"/><path d="M10 12h11m-4-4 4 4-4 4"/>',
+    parametros: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+    datos: '<ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    mas: '<circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>',
+    ir: '<path d="m9 6 6 6-6 6"/>', ok: '<path d="m5 12.5 4.5 4.5L19 7.5"/>', alerta: '<path d="M12 3 2 20h20zM12 10v4M12 17.5v.01"/>',
+    buscar: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>', mas2: '<path d="M12 5v14M5 12h14"/>',
+  }
+  const svg = (k) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONO[k]}</svg>`
+  const normal = (x) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const buscador = (ph) => `<label class="buscador">${svg('buscar')}<input type="search" placeholder="${esc(ph)}" aria-label="${esc(ph)}" value="${esc(ui.q || '')}"></label>`
+  const ir = `<td class="ir" aria-hidden="true">${svg('ir')}</td>`
   function render() {
     M = crearMotor(estado)
     const e = emp()
@@ -76,13 +94,35 @@
     guardarUi()
     $('#selEmpleador').innerHTML = empleadores().length ? opciones(empleadores().map((x) => [x.id, `${x.razon_social} · ${x.ruc || 's/RUC'}`]), ui.empleador) : '<option>Sin empleador</option>'
     $('#selPeriodo').value = ui.periodo.slice(0, 7)
-    $('#tabs').innerHTML = TABS.map(([k, t]) => `<button class="tab ${ui.tab === k ? 'activo' : ''}" data-accion="tab" data-tab="${k}">${t}</button>`).join('')
+    $('#mesTexto').textContent = mesLargo(ui.periodo)
+    const principal = TABS.find((t) => t[0] === ui.tab)?.[3]
+    $('#tabs').innerHTML = TABS.map(([k, largo, corto, prin]) => `<button class="tab ${ui.tab === k ? 'activo' : ''} ${prin ? '' : 'secundaria'}" data-accion="tab" data-tab="${k}"
+      ${ui.tab === k ? 'aria-current="page"' : ''}>${svg(k)}<span class="largo">${largo}</span><span class="corto">${corto}</span></button>`).join('')
+      + `<button class="tab tab-mas ${principal ? '' : 'activo'}" data-accion="mas">${svg('mas')}<span class="corto">Más</span></button>`
     $('#avisoGuardado').innerHTML = avisoGuardado ? `<div class="alerta mal">${esc(avisoGuardado)}</div>` : ''
     let html
     try { html = !e && !['datos', 'parametros'].includes(ui.tab) ? vistaInicio() : VISTAS[ui.tab]() }
     catch (err) { console.error(err); html = `<div class="alerta mal">Error al calcular: ${esc(err.message)}</div>` }
-    $('#vista').innerHTML = html
+    pintar($('#vista'), html)
+    const b = $('#vista .buscador input'); if (b) filtrar(b.value)
     renderModal()
+  }
+
+  // Pinta conservando qué secciones plegables estaban abiertas y etiqueta las celdas (en celular las tablas son tarjetas)
+  function pintar(cont, html) {
+    const det = {}; cont.querySelectorAll('details[data-id]').forEach((d) => { det[d.dataset.id] = d.open })
+    cont.innerHTML = html
+    cont.querySelectorAll('details[data-id]').forEach((d) => { if (d.dataset.id in det) d.open = det[d.dataset.id] })
+    cont.querySelectorAll('table.tabla').forEach((t) => {
+      const cab = [...t.querySelectorAll('thead th')].map((th) => th.textContent.trim())
+      t.querySelectorAll('tbody tr, tfoot tr').forEach((tr) => { let i = 0; for (const td of tr.children) { if (cab[i]) td.dataset.label = cab[i]; i += td.colSpan || 1 } })
+    })
+  }
+  function filtrar(q) {
+    ui.q = q; const n = normal(q).trim()
+    let visibles = 0
+    document.querySelectorAll('#vista tr[data-buscar]').forEach((tr) => { const ok = !n || tr.dataset.buscar.includes(n); tr.hidden = !ok; if (ok) visibles++ })
+    const v = $('#vista .sin-resultados'); if (v) v.hidden = !n || visibles > 0
   }
 
   // ---------------------------------------------------------------- Vistas
@@ -93,40 +133,48 @@
       <button data-accion="nuevoEmpleador">Registrar empleador a mano</button></div></section>`
   }
 
-  const tarjetaDato = (t, v, sub) => `<div class="dato"><div class="dato-t">${t}</div><div class="dato-v num">${v}</div>${sub ? `<div class="dato-s">${sub}</div>` : ''}</div>`
+  const kv = (t, v) => `<div class="kv"><span>${t}</span><b class="num">${v}</b></div>`
   function vistaPlanilla() {
     const e = emp(), p = M.planilla(e.id, ui.periodo), r = p.resumen, ci = cierreDe(e.id, ui.periodo)
-    const obs = p.observaciones
+    const obs = p.observaciones, bloq = obs.filter((o) => o.bloquea).length
     return `
-    <section class="cabecera-vista"><h2>Planilla de ${mesLargo(ui.periodo)}</h2>
-      <div class="fila-botones">
-        ${ci ? `<span class="chip ok">Cerrada el ${fecha(ci.cerrado_en.slice(0, 10))} · boletas emitidas</span><button data-accion="reabrir">Reabrir</button>`
-             : `<span class="chip">Abierta · borrador</span><button class="primario" data-accion="cerrar" ${r.observaciones_bloqueo ? 'disabled title="Resuelve las observaciones que bloquean"' : ''}>Cerrar planilla y emitir boletas</button>`}
-        <button data-accion="imprimirBoletas" ${p.filas.length ? '' : 'disabled'}>Imprimir boletas</button>
-        <button data-accion="csvPlanilla" ${p.filas.length ? '' : 'disabled'}>Exportar a Excel (CSV)</button>
-      </div></section>
-    <section class="datos">
-      ${tarjetaDato('Trabajadores', r.trabajadores)}${tarjetaDato('Ingresos', s2(r.ingresos))}${tarjetaDato('Descuentos', s2(r.descuentos))}
-      ${tarjetaDato('Neto a pagar', s2(r.neto))}${tarjetaDato('EsSalud', s2(r.essalud))}${tarjetaDato('Quinta categoría', s2(r.quinta))}
-      ${tarjetaDato('ONP / AFP', s2(r.pension))}${tarjetaDato('Provisión gratificación', s2(r.provision_gratificacion), 'incluye bonificación 9%')}
-      ${tarjetaDato('Provisión CTS', s2(r.provision_cts))}${tarjetaDato('Provisión vacaciones', s2(r.provision_vacaciones))}
-      ${tarjetaDato('Costo empresa', s2(r.costo_empresa), 'ingresos no provisionados + EsSalud + provisiones')}
+    <section class="cabecera-vista">
+      <div><h2>Planilla de ${mesLargo(ui.periodo)}</h2><div class="sub">${esc(e.razon_social)} · ${r.trabajadores} trabajadores · ${nombreRegimen(e.remype?.find(vivo)?.categoria || 'general')}</div></div>
+      ${ci ? `<span class="estado ok">${svg('ok')}Cerrada · boletas emitidas el ${fecha(ci.cerrado_en.slice(0, 10))}</span>`
+           : `<span class="estado">Borrador · aún se puede modificar</span>`}
     </section>
-    ${obs.length ? `<section class="tarjeta"><h3>Observaciones (${obs.length})</h3><ul class="obs">${obs.map((o) => `<li class="${o.bloquea ? 'bloquea' : ''}">
-      ${o.bloquea ? '<b>Bloquea el cierre</b> · ' : ''}${o.apellidos_nombres ? `<b>${esc(o.apellidos_nombres)}</b>: ` : ''}${esc(o.mensaje)}
-      ${o.codigo === 'TASAS_AFP' ? ' <button class="enlace" data-accion="tab" data-tab="parametros">Registrar tasas</button>' : ''}</li>`).join('')}</ul></section>` : ''}
-    <section class="tarjeta tabla-env"><table class="tabla">
+    <section class="resumen">
+      <div class="kpi principal"><div class="kpi-t">Neto a pagar</div><div class="kpi-v num">S/ ${s2(r.neto)}</div>
+        ${kv('Ingresos', s2(r.ingresos))}${kv('Descuentos', s2(r.descuentos))}</div>
+      <div class="kpi"><div class="kpi-t">Costo empresa</div><div class="kpi-v num">S/ ${s2(r.costo_empresa)}</div>
+        <div class="sub">Ingresos no provisionados + EsSalud + provisiones del mes</div></div>
+      <div class="kpi"><div class="kpi-t">Aportes y retenciones</div>${kv('EsSalud (empleador)', s2(r.essalud))}${kv('ONP / AFP', s2(r.pension))}${kv('Quinta categoría', s2(r.quinta))}</div>
+      <div class="kpi"><div class="kpi-t">Provisiones del mes</div>${kv('Gratificación + bonif.', s2(r.provision_gratificacion))}${kv('CTS', s2(r.provision_cts))}${kv('Vacaciones', s2(r.provision_vacaciones))}</div>
+    </section>
+    <section class="acciones">
+      ${ci ? '<button data-accion="reabrir">Reabrir el mes</button>'
+           : `<button class="primario" data-accion="cerrar" ${bloq ? 'disabled' : ''}>${svg('ok')}Cerrar planilla y emitir boletas</button>`}
+      <button data-accion="imprimirBoletas" ${p.filas.length ? '' : 'disabled'}>Imprimir boletas</button>
+      <button data-accion="csvPlanilla" ${p.filas.length ? '' : 'disabled'}>Exportar a Excel</button>
+    </section>
+    ${bloq && !ci ? `<p class="nota mal">${svg('alerta')}Para cerrar el mes resuelve primero ${bloq === 1 ? 'la observación marcada' : `las ${bloq} observaciones marcadas`} en rojo.</p>` : ''}
+    ${obs.length ? `<details class="tarjeta plegable" data-id="obs" ${bloq ? 'open' : ''}><summary>Observaciones <span class="badge ${bloq ? 'mal' : ''}">${obs.length}</span></summary>
+      <ul class="obs">${obs.map((o) => `<li class="${o.bloquea ? 'bloquea' : ''}">${o.apellidos_nombres ? `<b>${esc(o.apellidos_nombres)}</b>` : ''}<span>${esc(o.mensaje)}</span>
+        ${o.codigo === 'TASAS_AFP' ? '<button class="enlace" data-accion="tab" data-tab="parametros">Registrar tasas AFP</button>' : ''}</li>`).join('')}</ul></details>` : ''}
+    <section class="lista-cab"><h3>Trabajadores</h3>${buscador('Buscar por nombre, DNI o cargo')}</section>
+    <section class="tarjeta tabla-env"><table class="tabla clic">
       <thead><tr><th>Trabajador</th><th>Régimen</th><th>Pensión</th><th class="n">Días</th><th class="n">Básico</th><th class="n">Ingresos</th>
         <th class="n">Descuentos</th><th class="n">Neto</th><th class="n">EsSalud</th><th class="n">Costo empresa</th><th></th></tr></thead>
-      <tbody>${p.filas.map((f) => `<tr>
-        <td><b>${esc(f.apellidos_nombres)}</b><div class="sub">${esc(f.tipo_documento)} ${esc(f.numero_documento)}${f.cargo ? ' · ' + esc(f.cargo) : ''}</div></td>
-        <td>${nombreRegimen(f.regimen)}</td><td>${esc(f.afp || (f.sistema_pension === 'onp' ? 'ONP' : '—'))}${f.tasas_provisionales ? ' <span class="chip aviso">tasas prov.</span>' : ''}</td>
-        <td class="n">${f.dias_sueldo}${f.dias_no_pagados ? `<div class="sub">${f.dias_no_pagados} sin pago</div>` : ''}</td><td class="n">${s2(f.sueldo_basico)}</td>
-        <td class="n">${s2(f.ingresos)}</td><td class="n">${s2(f.descuentos)}</td><td class="n"><b>${s2(f.neto)}</b></td><td class="n">${s2(f.essalud)}</td>
-        <td class="n">${s2(f.costo_empresa)}</td><td><button class="enlace" data-accion="verBoleta" data-id="${esc(f.trabajador_id)}">Boleta</button></td></tr>`).join('')
+      <tbody>${p.filas.map((f) => `<tr data-accion="verBoleta" data-id="${esc(f.trabajador_id)}" data-buscar="${esc(normal(f.apellidos_nombres + ' ' + f.numero_documento + ' ' + (f.cargo || '')))}" tabindex="0">
+        <td class="titulo"><b>${esc(f.apellidos_nombres)}</b><div class="sub">${esc(f.tipo_documento)} ${esc(f.numero_documento)}${f.cargo ? ' · ' + esc(f.cargo) : ''}</div></td>
+        <td class="opc">${nombreRegimen(f.regimen)}</td><td>${esc(f.afp || (f.sistema_pension === 'onp' ? 'ONP' : '—'))}${f.tasas_provisionales ? ' <span class="chip aviso">tasas prov.</span>' : ''}</td>
+        <td class="n">${f.dias_sueldo}${f.dias_no_pagados ? `<div class="sub mal">${f.dias_no_pagados} sin pago</div>` : ''}</td><td class="n">${s2(f.sueldo_basico)}</td>
+        <td class="n">${s2(f.ingresos)}</td><td class="n">${s2(f.descuentos)}</td><td class="n destacado">${s2(f.neto)}</td><td class="n">${s2(f.essalud)}</td>
+        <td class="n">${s2(f.costo_empresa)}</td>${ir}</tr>`).join('')
         || '<tr><td colspan="11" class="vacio">No hay trabajadores con vínculo en el mes.</td></tr>'}</tbody>
-      ${p.filas.length ? `<tfoot><tr><td colspan="5">Total</td><td class="n">${s2(r.ingresos)}</td><td class="n">${s2(r.descuentos)}</td><td class="n">${s2(r.neto)}</td>
-        <td class="n">${s2(r.essalud)}</td><td class="n">${s2(r.costo_empresa)}</td><td></td></tr></tfoot>` : ''}</table></section>`
+      ${p.filas.length ? `<tfoot><tr><td colspan="5" class="titulo">Total del mes</td><td class="n">${s2(r.ingresos)}</td><td class="n">${s2(r.descuentos)}</td><td class="n destacado">${s2(r.neto)}</td>
+        <td class="n">${s2(r.essalud)}</td><td class="n">${s2(r.costo_empresa)}</td><td></td></tr></tfoot>` : ''}</table>
+      <p class="vacio sin-resultados" hidden>Ningún trabajador coincide con la búsqueda.</p></section>`
   }
 
   function selTrabajador(nombre = 'trabajador_id', actual) {
@@ -146,24 +194,24 @@
       ${ci ? '<span class="chip ok">Mes cerrado: las novedades no se pueden cambiar (R-24)</span>' : '<span class="sub">Lo que registres aquí se refleja al instante en la planilla y en las boletas.</span>'}</section>
     <div class="rejilla2">
     <section class="tarjeta"><h3>Ausencias, vacaciones, descansos y subsidios</h3>
-      <form data-form="ausencia" class="form"><fieldset ${dis}>
+      ${ci ? '' : `<details class="alta" data-id="alta-ausencia"><summary>${svg('mas2')}Registrar ausencia, vacaciones o subsidio</summary><form data-form="ausencia" class="form"><fieldset ${dis}>
         <label>Trabajador ${selTrabajador()}</label>
         <label>Tipo <select name="tipo" required>${opciones(D.tiposAusencia.map((t) => [t.codigo, t.nombre]), '', 'Elige el tipo')}</select></label>
         <label>Desde <input type="date" name="desde" required min="${ini}"></label><label>Hasta <input type="date" name="hasta" required></label>
         <label class="ancho">Detalle <input name="detalle" placeholder="Opcional: certificado, papeleta, etc."></label>
-        <button class="primario">Registrar</button></fieldset></form>
+        <button class="primario">Registrar</button></fieldset></form></details>`}
       <p class="sub">Vacaciones: si el trabajador aún no completa su año, los días se registran como <b>adelanto</b> y se descuentan solo de las vacaciones truncas al cese.</p>
       <table class="tabla"><thead><tr><th>Trabajador</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th class="n">Días</th><th></th></tr></thead><tbody>
       ${aus.map((a) => `<tr><td>${nom(a.trabajador_id)}</td><td>${esc(D.tiposAusencia.find((t) => t.codigo === a.tipo)?.nombre)}${a.detalle ? `<div class="sub">${esc(a.detalle)}</div>` : ''}</td>
         <td>${fecha(a.desde)}</td><td>${fecha(a.hasta)}</td><td class="n">${F.diasEntre(a.desde, a.hasta) + 1}</td><td>${anular('ausencias', a.id)}</td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Sin ausencias en el mes.</td></tr>'}
       </tbody></table></section>
     <section class="tarjeta"><h3>Horas extra, feriados trabajados y tardanzas</h3>
-      <form data-form="asistencia" class="form"><fieldset ${dis}>
+      ${ci ? '' : `<details class="alta" data-id="alta-asistencia"><summary>${svg('mas2')}Registrar horas extra, feriado o tardanza</summary><form data-form="asistencia" class="form"><fieldset ${dis}>
         <label>Trabajador ${selTrabajador()}</label><label>Fecha <input type="date" name="fecha" required min="${ini}" max="${fin}"></label>
         <label>Horas extra <input type="number" name="horas_extra" min="0" max="12" step="0.25" value="0"></label>
         <label>Minutos de tardanza <input type="number" name="minutos_tardanza" min="0" step="1" value="0"></label>
         <label class="check"><input type="checkbox" name="feriado_trabajado"> Trabajó en feriado o descanso sin descanso sustitutorio</label>
-        <button class="primario">Registrar</button></fieldset></form>
+        <button class="primario">Registrar</button></fieldset></form></details>`}
       <p class="sub">Primeras 2 horas del día al 25%, las siguientes al 35% (R-08). Feriado trabajado: pago adicional de 2 remuneraciones diarias (R-09).
         ${fer.length ? `Feriados del mes: ${fer.map((f) => `${fecha(f.fecha).slice(0, 5)} ${esc(f.nombre)}`).join(' · ')}.` : ''}</p>
       <table class="tabla"><thead><tr><th>Trabajador</th><th>Fecha</th><th class="n">H. extra</th><th>Feriado</th><th class="n">Tardanza</th><th></th></tr></thead><tbody>
@@ -171,12 +219,12 @@
         <td class="n">${a.minutos_tardanza ? a.minutos_tardanza + ' min' : ''}</td><td>${anular('asistencia', a.id)}</td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Sin registros en el mes.</td></tr>'}
       </tbody></table></section>
     <section class="tarjeta"><h3>Bonos, comisiones, adelantos y otros descuentos del mes</h3>
-      <form data-form="movimiento" class="form"><fieldset ${dis}>
+      ${ci ? '' : `<details class="alta" data-id="alta-movimiento"><summary>${svg('mas2')}Registrar bono, adelanto o descuento</summary><form data-form="movimiento" class="form"><fieldset ${dis}>
         <label>Trabajador ${selTrabajador()}</label>
         <label>Concepto <select name="concepto" required>${opciones(D.conceptos.filter((c) => c.manual && !c.liquidacion).map((c) => [c.codigo, `${c.nombre} (${c.tipo})`]), '', 'Elige el concepto')}</select></label>
         <label>Monto S/ <input type="number" name="monto" min="0.01" step="0.01" required></label>
         <label class="ancho">Detalle <input name="detalle" placeholder="Opcional"></label>
-        <button class="primario">Registrar</button></fieldset></form>
+        <button class="primario">Registrar</button></fieldset></form></details>`}
       <p class="sub">Los montos fijos de todos los meses (movilidad, bono fijo) se registran en la ficha del trabajador como <b>conceptos fijos</b>.</p>
       <table class="tabla"><thead><tr><th>Trabajador</th><th>Concepto</th><th class="n">Monto</th><th></th></tr></thead><tbody>
       ${mov.map((m) => `<tr><td>${nom(m.trabajador_id)}</td><td>${esc(nombreConcepto(m.concepto))}${m.detalle ? `<div class="sub">${esc(m.detalle)}</div>` : ''}</td>
@@ -186,21 +234,24 @@
 
   function vistaTrabajadores() {
     const ts = trabajadoresEmp(), fin = F.finMes(ui.periodo)
-    return `<section class="cabecera-vista"><h2>Trabajadores</h2><div class="fila-botones"><button class="primario" data-accion="nuevoTrabajador">Nuevo trabajador</button></div></section>
-    <section class="tarjeta tabla-env"><table class="tabla"><thead><tr><th>Trabajador</th><th>Cargo</th><th>Ingreso</th><th>Cese</th><th>Régimen</th><th>Pensión</th>
+    return `<section class="cabecera-vista"><div><h2>Trabajadores</h2><div class="sub">${ts.filter((t) => !t.fecha_cese).length} con vínculo vigente · toca uno para ver su ficha</div></div>
+      <button class="primario" data-accion="nuevoTrabajador">${svg('mas2')}Nuevo trabajador</button></section>
+    <section class="lista-cab">${buscador('Buscar por nombre, DNI, cargo o código')}</section>
+    <section class="tarjeta tabla-env"><table class="tabla clic"><thead><tr><th>Trabajador</th><th>Cargo</th><th>Ingreso</th><th>Cese</th><th>Régimen</th><th>Pensión</th>
       <th class="n">Sueldo al ${fecha(fin)}</th><th>Cód. ERP</th><th></th></tr></thead><tbody>
-      ${ts.map((t) => `<tr class="${t.fecha_cese && t.fecha_cese < ui.periodo ? 'apagado' : ''}"><td><b>${esc(t.apellidos_nombres)}</b><div class="sub">${esc(t.tipo_documento)} ${esc(t.numero_documento)}</div></td>
-        <td>${esc(t.cargo || '—')}</td><td>${fecha(t.fecha_ingreso)}</td><td>${t.fecha_cese ? fecha(t.fecha_cese) : '—'}</td><td>${nombreRegimen(M.regimenEn(t.id, mn(fin, t.fecha_cese || fin)))}</td>
+      ${ts.map((t) => `<tr class="${t.fecha_cese && t.fecha_cese < ui.periodo ? 'apagado' : ''}" data-accion="ficha" data-id="${esc(t.id)}" tabindex="0"
+          data-buscar="${esc(normal([t.apellidos_nombres, t.numero_documento, t.cargo, t.codigo_externo].join(' ')))}">
+        <td class="titulo"><b>${esc(t.apellidos_nombres)}</b><div class="sub">${esc(t.tipo_documento)} ${esc(t.numero_documento)}${t.fecha_cese ? ` · <span class="mal">cesó el ${fecha(t.fecha_cese)}</span>` : ''}</div></td>
+        <td>${esc(t.cargo || '—')}</td><td>${fecha(t.fecha_ingreso)}</td><td class="opc">${t.fecha_cese ? fecha(t.fecha_cese) : '—'}</td><td>${nombreRegimen(M.regimenEn(t.id, mn(fin, t.fecha_cese || fin)))}</td>
         <td>${esc(nombrePension(t))}${t.sistema_pension === 'afp' ? `<div class="sub">${esc(t.comision_afp)} · ${esc(t.cuspp || 'sin CUSPP')}</div>` : ''}</td>
-        <td class="n">${s2(M.sueldoEn(t.id, mn(fin, t.fecha_cese || fin)))}</td><td>${esc(t.codigo_externo || '—')}</td>
-        <td><button class="enlace" data-accion="ficha" data-id="${esc(t.id)}">Ficha</button></td></tr>`).join('') || '<tr><td colspan="9" class="vacio">Sin trabajadores.</td></tr>'}
-    </tbody></table></section>`
+        <td class="n destacado">${s2(M.sueldoEn(t.id, mn(fin, t.fecha_cese || fin)))}</td><td>${esc(t.codigo_externo || '—')}</td>${ir}</tr>`).join('') || '<tr><td colspan="9" class="vacio">Sin trabajadores.</td></tr>'}
+    </tbody></table><p class="vacio sin-resultados" hidden>Ningún trabajador coincide con la búsqueda.</p></section>`
   }
 
   function navSemestre(tipo, sem) {
-    return `<div class="fila-botones"><button data-accion="semestre" data-tipo="${tipo}" data-paso="-6">◀ Anterior</button>
+    return `<div class="fila-botones navsem"><button data-accion="semestre" data-tipo="${tipo}" data-paso="-6"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>Anterior</button>
       <b>${mesLargo(sem)} – ${mesLargo(F.sumarMeses(sem, 5))} · ${tipo === 'cts' ? 'depósito en ' + mesLargo(F.sumarMeses(sem, 6)) : 'pago en ' + mesLargo(F.sumarMeses(sem, sem.slice(5, 7) === '01' ? 6 : 5))}</b>
-      <button data-accion="semestre" data-tipo="${tipo}" data-paso="6">Siguiente ▶</button></div>`
+      <button data-accion="semestre" data-tipo="${tipo}" data-paso="6">Siguiente<svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></div>`
   }
   function vistaBeneficios() {
     const e = emp(), sub = ui.sub || 'grati', nom = (id) => esc(trab(id)?.apellidos_nombres)
@@ -209,41 +260,41 @@
     if (sub === 'grati') {
       const sem = ui.semGrati || F.semestreGrati(F.sumarMeses(ui.periodo, -1)), gs = M.gratificaciones(e.id, sem)
       ui.semGrati = sem
-      cuerpo = `${navSemestre('grati', sem)}<p class="sub">Pequeña empresa: ½ remuneración computable; general: 1; micro: no corresponde. Se paga en julio y diciembre con la planilla del mes;
-        si el trabajador cesa antes, se paga trunca en la liquidación (R-17). Bonificación extraordinaria 9% (6.75% con EPS).</p>
+      cuerpo = `${navSemestre('grati', sem)}<details class="ayuda" data-id="ayuda-1"><summary>¿Cómo se calcula?</summary><p class="sub">Pequeña empresa: ½ remuneración computable; general: 1; micro: no corresponde. Se paga en julio y diciembre con la planilla del mes;
+        si el trabajador cesa antes, se paga trunca en la liquidación (R-17). Bonificación extraordinaria 9% (6.75% con EPS).</p></details>
         <table class="tabla"><thead><tr><th>Trabajador</th><th>Tipo</th><th>Régimen</th><th class="n">Meses</th><th class="n">Días no comp.</th><th class="n">Computable</th>
         <th class="n">Gratificación</th><th class="n">Bonificación</th><th>Se paga en</th></tr></thead><tbody>
-        ${gs.map((g) => `<tr><td>${nom(g.trabajador_id)}</td><td>${TIPO[g.tipo]}</td><td>${nombreRegimen(g.regimen)}</td><td class="n">${g.meses}</td><td class="n">${g.dias_no_computables}</td>
-          <td class="n">${s2(g.computable)}</td><td class="n">${s2(g.monto)}</td><td class="n">${s2(g.bonificacion)}</td><td>${g.tipo === 'trunca' ? 'Liquidación' : mesLargo(g.pago_mes)}</td></tr>`).join('') || '<tr><td colspan="9" class="vacio">Sin trabajadores en el semestre.</td></tr>'}
+        ${gs.map((g) => `<tr><td class="titulo"><b>${nom(g.trabajador_id)}</b></td><td>${TIPO[g.tipo]}</td><td>${nombreRegimen(g.regimen)}</td><td class="n">${g.meses}</td><td class="n">${g.dias_no_computables}</td>
+          <td class="n">${s2(g.computable)}</td><td class="n destacado">${s2(g.monto)}</td><td class="n">${s2(g.bonificacion)}</td><td>${g.tipo === 'trunca' ? 'Liquidación' : mesLargo(g.pago_mes)}</td></tr>`).join('') || '<tr><td colspan="9" class="vacio">Sin trabajadores en el semestre.</td></tr>'}
         </tbody>${gs.length ? `<tfoot><tr><td colspan="6">Total</td><td class="n">${s2(gs.reduce((a, g) => a + g.monto, 0))}</td><td class="n">${s2(gs.reduce((a, g) => a + g.bonificacion, 0))}</td><td></td></tr></tfoot>` : ''}</table>`
     } else if (sub === 'cts') {
       const sem = ui.semCts || F.semestreCts(F.sumarMeses(ui.periodo, -1)), cs = M.cts(e.id, sem)
       ui.semCts = sem
-      cuerpo = `${navSemestre('cts', sem)}<p class="sub">Pequeña empresa: 15 días de remuneración por año (tope 90 días); general: 30 días; micro: no corresponde.
-        Computable = remuneración + 1/6 de la gratificación del semestre. Depósito hasta el 15 de mayo y de noviembre (R-18).</p>
+      cuerpo = `${navSemestre('cts', sem)}<details class="ayuda" data-id="ayuda-2"><summary>¿Cómo se calcula?</summary><p class="sub">Pequeña empresa: 15 días de remuneración por año (tope 90 días); general: 30 días; micro: no corresponde.
+        Computable = remuneración + 1/6 de la gratificación del semestre. Depósito hasta el 15 de mayo y de noviembre (R-18).</p></details>
         <table class="tabla"><thead><tr><th>Trabajador</th><th>Tipo</th><th>Periodo</th><th class="n">Meses y días</th><th class="n">Computable</th><th class="n">1/6 grati</th>
         <th class="n">Días ganados</th><th class="n">CTS</th><th></th></tr></thead><tbody>
-        ${cs.map((c) => `<tr><td>${nom(c.trabajador_id)}</td><td>${TIPO[c.tipo]}</td><td>${fecha(c.desde)} – ${fecha(c.hasta)}</td><td class="n">${c.meses} m ${c.dias_resto} d</td>
-          <td class="n">${s2(c.computable)}</td><td class="n">${s2(c.sexto)}</td><td class="n">${Math.round(c.dias_ganados * 100) / 100}</td><td class="n">${s2(c.monto)}</td>
+        ${cs.map((c) => `<tr><td class="titulo"><b>${nom(c.trabajador_id)}</b></td><td>${TIPO[c.tipo]}</td><td>${fecha(c.desde)} – ${fecha(c.hasta)}</td><td class="n">${c.meses} m ${c.dias_resto} d</td>
+          <td class="n">${s2(c.computable)}</td><td class="n">${s2(c.sexto)}</td><td class="n">${Math.round(c.dias_ganados * 100) / 100}</td><td class="n destacado">${s2(c.monto)}</td>
           <td>${c.monto > 0 && c.tipo === 'deposito' ? `<button class="enlace" data-accion="hojaCts" data-id="${esc(c.trabajador_id)}" data-sem="${sem}">Constancia</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="9" class="vacio">Sin trabajadores en el semestre.</td></tr>'}
         </tbody>${cs.length ? `<tfoot><tr><td colspan="7">Total</td><td class="n">${s2(cs.reduce((a, c) => a + c.monto, 0))}</td><td></td></tr></tfoot>` : ''}</table>`
     } else if (sub === 'provisiones') {
       const ps = M.provisiones(e.id, ui.periodo), t = (k) => s2(ps.reduce((a, p) => a + p[k], 0))
-      cuerpo = `<p class="sub">Provisión del mes = lo devengado al cierre del mes menos lo devengado al cierre del mes anterior (R-19). Así la suma de las provisiones del semestre es exactamente
-        lo que se paga en julio, diciembre, mayo y noviembre, sin ajustes manuales.</p>
+      cuerpo = `<details class="ayuda" data-id="ayuda-3"><summary>¿Cómo se calcula?</summary><p class="sub">Provisión del mes = lo devengado al cierre del mes menos lo devengado al cierre del mes anterior (R-19). Así la suma de las provisiones del semestre es exactamente
+        lo que se paga en julio, diciembre, mayo y noviembre, sin ajustes manuales.</p></details>
         <table class="tabla"><thead><tr><th>Trabajador</th><th class="n">Gratificación</th><th class="n">Bonificación</th><th class="n">CTS</th><th class="n">Vacaciones</th><th class="n">Total</th></tr></thead><tbody>
-        ${ps.map((p) => `<tr><td>${nom(p.trabajador_id)}</td><td class="n">${s2(p.gratificacion)}</td><td class="n">${s2(p.bonificacion)}</td><td class="n">${s2(p.cts)}</td>
-          <td class="n">${s2(p.vacaciones)}</td><td class="n">${s2(p.gratificacion + p.bonificacion + p.cts + p.vacaciones)}</td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Sin trabajadores.</td></tr>'}
+        ${ps.map((p) => `<tr><td class="titulo"><b>${nom(p.trabajador_id)}</b></td><td class="n">${s2(p.gratificacion)}</td><td class="n">${s2(p.bonificacion)}</td><td class="n">${s2(p.cts)}</td>
+          <td class="n">${s2(p.vacaciones)}</td><td class="n destacado">${s2(p.gratificacion + p.bonificacion + p.cts + p.vacaciones)}</td></tr>`).join('') || '<tr><td colspan="6" class="vacio">Sin trabajadores.</td></tr>'}
         </tbody>${ps.length ? `<tfoot><tr><td>Total ${mesLargo(ui.periodo)}</td><td class="n">${t('gratificacion')}</td><td class="n">${t('bonificacion')}</td><td class="n">${t('cts')}</td><td class="n">${t('vacaciones')}</td>
           <td class="n">${s2(ps.reduce((a, p) => a + p.gratificacion + p.bonificacion + p.cts + p.vacaciones, 0))}</td></tr></tfoot>` : ''}</table>`
     } else {
       const vs = M.vacacionesDe(e.id)
-      cuerpo = `<p class="sub">Pequeña y micro: 15 días por año; general: 30 (R-20). Los días gozados se descuentan del periodo más antiguo. Las vacaciones no gozadas dentro del año siguiente
-        vencen y generan indemnización vacacional. Corte: fecha de cese o hoy.</p>
+      cuerpo = `<details class="ayuda" data-id="ayuda-4"><summary>¿Cómo se calcula?</summary><p class="sub">Pequeña y micro: 15 días por año; general: 30 (R-20). Los días gozados se descuentan del periodo más antiguo. Las vacaciones no gozadas dentro del año siguiente
+        vencen y generan indemnización vacacional. Corte: fecha de cese o hoy.</p></details>
         <table class="tabla"><thead><tr><th>Trabajador</th><th>Corte</th><th class="n">Ganados</th><th class="n">Gozados</th><th class="n">Pendientes</th><th class="n">Vencidos</th>
         <th class="n">Adelantados</th><th class="n">Truncos</th><th class="n">Monto pendientes</th><th></th></tr></thead><tbody>
-        ${vs.map((v) => `<tr><td>${nom(v.trabajador_id)}</td><td>${fecha(v.corte)}</td><td class="n">${v.dias_ganados}</td><td class="n">${v.dias_gozados}</td><td class="n">${v.dias_pendientes}</td>
-          <td class="n">${v.dias_vencidos ? `<b class="mal">${v.dias_vencidos}</b>` : 0}</td><td class="n">${v.dias_adelantados}</td><td class="n">${v.dias_trunca}</td><td class="n">${s2(v.monto_pendientes)}</td>
+        ${vs.map((v) => `<tr><td class="titulo"><b>${nom(v.trabajador_id)}</b></td><td>${fecha(v.corte)}</td><td class="n">${v.dias_ganados}</td><td class="n">${v.dias_gozados}</td><td class="n">${v.dias_pendientes}</td>
+          <td class="n">${v.dias_vencidos ? `<b class="mal">${v.dias_vencidos}</b>` : 0}</td><td class="n">${v.dias_adelantados}</td><td class="n">${v.dias_trunca}</td><td class="n destacado">${s2(v.monto_pendientes)}</td>
           <td><button class="enlace" data-accion="verVacaciones" data-id="${esc(v.trabajador_id)}">Periodos</button></td></tr>`).join('') || '<tr><td colspan="10" class="vacio">Sin trabajadores.</td></tr>'}
         </tbody></table>`
     }
@@ -255,13 +306,12 @@
     const ls = M.liquidaciones(emp().id)
     return `<section class="cabecera-vista"><h2>Liquidaciones de beneficios sociales</h2>
       <div class="fila-botones"><button class="primario" data-accion="simular">Simular una liquidación o indemnización</button></div></section>
-      <p class="sub">Para liquidar a un trabajador, registra su cese en su ficha (Trabajadores → Ficha → Cese). La liquidación se paga dentro de las 48 horas del cese (R-21):
-        CTS y gratificación truncas, vacaciones pendientes, vencidas (indemnización) y truncas, indemnización por despido arbitrario (R-22), con la quinta regularizada sobre lo percibido en el año (R-23).</p>
-      <section class="tarjeta tabla-env"><table class="tabla"><thead><tr><th>Trabajador</th><th>Cese</th><th>Motivo</th><th>Servicio</th><th class="n">Ingresos</th><th class="n">Descuentos</th>
+      <details class="ayuda" data-id="ayuda-5"><summary>¿Cómo se calcula?</summary><details class="ayuda" data-id="ayuda-liq"><summary>¿Qué incluye la liquidación?</summary><p class="sub">Para liquidar a un trabajador, registra su cese en su ficha (Trabajadores → Ficha → Cese). La liquidación se paga dentro de las 48 horas del cese (R-21):
+        CTS y gratificación truncas, vacaciones pendientes, vencidas (indemnización) y truncas, indemnización por despido arbitrario (R-22), con la quinta regularizada sobre lo percibido en el año (R-23).</p></details></details>
+      <section class="tarjeta tabla-env"><table class="tabla clic"><thead><tr><th>Trabajador</th><th>Cese</th><th>Motivo</th><th>Servicio</th><th class="n">Ingresos</th><th class="n">Descuentos</th>
         <th class="n">Neto</th><th>Pagar hasta</th><th></th></tr></thead><tbody>
-      ${ls.map((l) => `<tr><td><b>${esc(l.apellidos_nombres)}</b></td><td>${fecha(l.fecha_cese)}</td><td>${esc(l.motivo_cese)}</td><td>${l.servicio_anios} a ${l.servicio_meses} m ${l.servicio_dias} d</td>
-        <td class="n">${s2(l.ingresos)}</td><td class="n">${s2(l.descuentos)}</td><td class="n"><b>${s2(l.neto)}</b></td><td>${fecha(l.fecha_limite_pago)}</td>
-        <td><button class="enlace" data-accion="verLiquidacion" data-id="${esc(l.trabajador_id)}">Ver e imprimir</button></td></tr>`).join('') || '<tr><td colspan="9" class="vacio">No hay ceses registrados.</td></tr>'}
+      ${ls.map((l) => `<tr data-accion="verLiquidacion" data-id="${esc(l.trabajador_id)}" tabindex="0"><td class="titulo"><b>${esc(l.apellidos_nombres)}</b></td><td>${fecha(l.fecha_cese)}</td><td>${esc(l.motivo_cese)}</td><td>${l.servicio_anios} a ${l.servicio_meses} m ${l.servicio_dias} d</td>
+        <td class="n">${s2(l.ingresos)}</td><td class="n">${s2(l.descuentos)}</td><td class="n destacado">${s2(l.neto)}</td><td>${fecha(l.fecha_limite_pago)}</td>${ir}</tr>`).join('') || '<tr><td colspan="9" class="vacio">No hay ceses registrados.</td></tr>'}
       </tbody></table></section>`
   }
 
@@ -344,6 +394,12 @@
     liquidaciones: vistaLiquidaciones, parametros: vistaParametros, datos: vistaDatos }
 
   // ---------------------------------------------------------------- Documentos imprimibles
+  // En pantallas angostas la boleta muestra sus conceptos como lista; al imprimir siempre sale la tabla del formato
+  function conceptosMovil(L, neto) {
+    const grupo = (tipo, t) => { const xs = L.filter((l) => l.tipo === tipo); return xs.length ? `<div class="bm-grupo"><div class="bm-t"><span>${t}</span><span class="num">${s2(xs.reduce((a, l) => a + l.monto, 0))}</span></div>
+      ${xs.map((l) => `<div class="bm-l"><span>${esc(l.nombre)}${l.cantidad > 0 && !['HE25', 'HE35'].includes(l.concepto) ? ` <small>(${Math.round(l.cantidad * 100) / 100})</small>` : ''}</span><span class="num">${s2(l.monto)}</span></div>`).join('')}</div>` : '' }
+    return `<div class="b-movil">${grupo('ingreso', 'Ingresos')}${grupo('descuento', 'Descuentos')}<div class="bm-neto"><span>Neto a pagar</span><b class="num">S/ ${s2(neto)}</b></div>${grupo('aporte', 'Aportes del empleador')}</div>`
+  }
   function htmlBoleta(b, copia) {
     const c = b.cabecera, L = b.lineas, suma = (t) => L.filter((l) => l.tipo === t).reduce((a, l) => a + l.monto, 0)
     const cant = (cod) => Number(L.find((l) => l.concepto === cod)?.cantidad || 0)
@@ -352,18 +408,19 @@
       <div class="b-cab"><div><div><b>Empresa:</b> ${esc(b.empleador.razon_social)}</div>${b.empleador.direccion ? `<div><b>Domicilio:</b> ${esc(b.empleador.direccion)}</div>` : ''}
         <div><b>RUC:</b> ${esc(b.empleador.ruc || '—')}</div></div>
         <div class="der"><div class="b-tit">BOLETA DE PAGO</div><div>Periodo: ${mesLargo(b.periodo)}</div>${copia ? `<div class="k">${copia}</div>` : ''}<div class="k">D.S. 001-98-TR</div></div></div>
-      <table class="b-tab"><tbody>
-        <tr>${dato(c.tipo_documento || 'DNI', c.numero_documento)}<td colspan="3"><div class="k">Apellidos y nombres</div><b>${esc(c.apellidos_nombres)}</b></td>${dato('Sueldo básico', s2(c.sueldo_basico))}</tr>
+      <table class="b-tab b-datos"><tbody>
+        <tr>${dato(c.tipo_documento || 'DNI', c.numero_documento)}<td colspan="3" class="full"><div class="k">Apellidos y nombres</div><b>${esc(c.apellidos_nombres)}</b></td>${dato('Sueldo básico', s2(c.sueldo_basico))}</tr>
         <tr>${dato('Cargo', c.cargo)}${dato('Régimen pensionario', c.sistema_pension === 'afp' ? String(c.afp || 'AFP').toUpperCase() : c.sistema_pension === 'onp' ? 'ONP' : '—')}
           ${dato('CUSPP', c.sistema_pension === 'afp' ? c.cuspp : '—')}${dato('Fecha ingreso', fecha(c.fecha_ingreso))}${dato('Fecha cese', c.fecha_cese ? fecha(c.fecha_cese) : '—')}</tr>
         <tr>${dato('Días trabajados', c.dias_sueldo)}${dato('H. ordinarias', (c.dias_sueldo || 0) * 8)}${dato('Días subsidiados', c.dias_subsidiados || 0)}${dato('Faltas', c.dias_no_pagados || 0)}${dato('Categoría', nombreRegimen(c.regimen))}</tr>
         <tr>${dato('Días vacaciones', c.dias_vacaciones || 0)}${dato('H.E. al 25%', cant('HE25'))}${dato('H.E. al 35%', cant('HE35'))}${dato('Feriados lab.', cant('FERIADO'))}<td></td></tr>
       </tbody></table>
-      <table class="b-tab"><thead><tr><th class="cod">Cód.</th><th>Conceptos</th><th class="n">Ingresos</th><th class="n">Descuentos</th><th class="n">Aportes empleador</th></tr></thead><tbody>
+      <table class="b-tab b-conceptos"><thead><tr><th class="cod">Cód.</th><th>Conceptos</th><th class="n">Ingresos</th><th class="n">Descuentos</th><th class="n">Aportes empleador</th></tr></thead><tbody>
         ${L.map((l) => `<tr><td class="k">${esc(l.plame || '')}</td><td>${esc(l.nombre)}${l.cantidad > 0 && !['HE25', 'HE35'].includes(l.concepto) ? ` <span class="k">(${l.cantidad})</span>` : ''}</td>
           <td class="n">${l.tipo === 'ingreso' ? s2(l.monto) : ''}</td><td class="n">${l.tipo === 'descuento' ? s2(l.monto) : ''}</td><td class="n">${l.tipo === 'aporte' ? s2(l.monto) : ''}</td></tr>`).join('')}
         <tr class="tot"><td></td><td>Importe total</td><td class="n">${s2(suma('ingreso'))}</td><td class="n">${s2(suma('descuento'))}</td><td class="n">${s2(suma('aporte'))}</td></tr>
         <tr class="tot neto"><td></td><td>Neto a pagar en S/</td><td></td><td class="n">${s2(suma('ingreso') - suma('descuento'))}</td><td></td></tr></tbody></table>
+      ${conceptosMovil(L, suma('ingreso') - suma('descuento'))}
       <div class="firmas"><div>LA EMPRESA</div><div>${esc(c.apellidos_nombres)}</div></div></div>`
   }
   const boletasImpresion = (bs) => bs.map((b) => `<div class="hoja">${htmlBoleta(b, 'Copia empleador')}<div class="corte"></div>${htmlBoleta(b, 'Copia trabajador')}</div>`).join('')
@@ -373,16 +430,17 @@
     return `<div class="boleta liq">${simulada ? '<div class="borrador">SIMULACIÓN · no registra el cese</div>' : ''}
       <div class="b-cab"><div><div><b>Empresa:</b> ${esc(e.razon_social)}</div>${e.direccion ? `<div><b>Domicilio:</b> ${esc(e.direccion)}</div>` : ''}<div><b>RUC:</b> ${esc(e.ruc || '—')}</div></div>
         <div class="der"><div class="b-tit">LIQUIDACIÓN DE BENEFICIOS SOCIALES</div><div>Pagar hasta: ${fecha(l.fecha_limite_pago)}</div></div></div>
-      <table class="b-tab"><tbody>
-        <tr><td><div class="k">${esc(l.tipo_documento || 'DNI')}</div>${esc(l.numero_documento)}</td><td colspan="2"><div class="k">Apellidos y nombres</div><b>${esc(l.apellidos_nombres)}</b></td><td><div class="k">Cargo</div>${esc(l.cargo || '—')}</td></tr>
+      <table class="b-tab b-datos"><tbody>
+        <tr><td><div class="k">${esc(l.tipo_documento || 'DNI')}</div>${esc(l.numero_documento)}</td><td colspan="2" class="full"><div class="k">Apellidos y nombres</div><b>${esc(l.apellidos_nombres)}</b></td><td><div class="k">Cargo</div>${esc(l.cargo || '—')}</td></tr>
         <tr><td><div class="k">Fecha ingreso</div>${fecha(l.fecha_ingreso)}</td><td><div class="k">Fecha cese</div>${fecha(l.fecha_cese)}</td><td><div class="k">Motivo</div>${esc(l.motivo_cese)}</td>
           <td><div class="k">Tiempo de servicio</div>${l.servicio_anios} años, ${l.servicio_meses} meses, ${l.servicio_dias} días</td></tr>
         <tr><td><div class="k">Régimen</div>${nombreRegimen(l.regimen)}</td><td colspan="3"><div class="k">Remuneración computable</div>S/ ${s2(l.computable)}</td></tr></tbody></table>
-      <table class="b-tab"><thead><tr><th class="cod">Cód.</th><th>Concepto</th><th class="n">Cantidad</th><th class="n">Ingresos</th><th class="n">Descuentos</th><th class="n">Aportes empleador</th></tr></thead><tbody>
+      <table class="b-tab b-conceptos"><thead><tr><th class="cod">Cód.</th><th>Concepto</th><th class="n">Cantidad</th><th class="n">Ingresos</th><th class="n">Descuentos</th><th class="n">Aportes empleador</th></tr></thead><tbody>
         ${L.map((x) => `<tr><td class="k">${esc(x.plame || '')}</td><td>${esc(x.nombre)}</td><td class="n">${x.cantidad != null ? Math.round(x.cantidad * 100) / 100 : ''}</td>
           <td class="n">${x.tipo === 'ingreso' ? s2(x.monto) : ''}</td><td class="n">${x.tipo === 'descuento' ? s2(x.monto) : ''}</td><td class="n">${x.tipo === 'aporte' ? s2(x.monto) : ''}</td></tr>`).join('')}
         <tr class="tot"><td></td><td colspan="2">Totales</td><td class="n">${s2(suma('ingreso'))}</td><td class="n">${s2(suma('descuento'))}</td><td class="n">${s2(suma('aporte'))}</td></tr>
         <tr class="tot neto"><td></td><td colspan="2">Neto a pagar en S/</td><td></td><td class="n">${s2(l.neto)}</td><td></td></tr></tbody></table>
+      ${conceptosMovil(L, l.neto)}
       <p class="k">Cantidad: días (CTS, vacaciones) o meses (gratificación). Indemnización por despido arbitrario según el régimen (R-22); quinta categoría regularizada sobre lo percibido en el año (R-23).
         La remuneración del último mes se paga en la planilla del mes.</p>
       <div class="firmas"><div>LA EMPRESA</div><div>${esc(l.apellidos_nombres)}<br>Recibí conforme</div></div></div>`
@@ -405,7 +463,10 @@
     if (!m) { if (d.open) d.close(); return }
     let titulo = '', cuerpo = '', pie = ''
     try {
-      if (m.tipo === 'boleta') {
+      if (m.tipo === 'mas') {
+        titulo = 'Más opciones'
+        cuerpo = `<div class="menu-mas">${TABS.filter((t) => !t[3]).map(([k, largo]) => `<button class="${ui.tab === k ? 'activo' : ''}" data-accion="tab" data-tab="${k}">${svg(k)}<span>${largo}</span>${svg('ir')}</button>`).join('')}</div>`
+      } else if (m.tipo === 'boleta') {
         const b = M.boleta(m.id, m.periodo); titulo = `Boleta · ${trab(m.id)?.apellidos_nombres}`
         cuerpo = b ? htmlBoleta(b) : 'Sin boleta en el mes.'; pie = `<button class="primario" data-accion="imprimirBoleta">Imprimir (2 copias)</button>`
       } else if (m.tipo === 'liquidacion') {
@@ -422,8 +483,9 @@
           </tbody></table><p>Truncos al ${fecha(v.corte)}: <b>${v.dias_trunca}</b> días · adelantados: <b>${v.dias_adelantados}</b> · computable S/ ${s2(v.computable)}</p>`
       }
     } catch (err) { cuerpo = `<div class="alerta mal">${esc(err.message)}</div>` }
-    d.innerHTML = `<div class="modal-cab"><h3>${esc(titulo)}</h3><button class="enlace" data-accion="cerrarModal" aria-label="Cerrar">✕</button></div>
-      <div class="modal-cuerpo">${cuerpo}</div>${pie ? `<div class="modal-pie">${pie}</div>` : ''}`
+    d.className = m.tipo === 'mas' ? 'hoja-mas' : ''
+    pintar(d, `<div class="modal-cab"><h3>${esc(titulo)}</h3><button class="cerrar" data-accion="cerrarModal" aria-label="Cerrar"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div class="modal-cuerpo">${cuerpo}</div>${pie ? `<div class="modal-pie">${pie}</div>` : ''}`)
     if (!d.open) d.showModal()
   }
 
@@ -469,35 +531,46 @@
     if (!t) return `<form data-form="trabajador" class="form">${campos}<button class="primario">Registrar trabajador</button></form>
       <p class="sub">Si ingresó antes de ${mesLargo(e.inicio_planilla)} (inicio de la planilla en el sistema), registra luego en su ficha su saldo inicial de vacaciones y sus rentas de quinta del año.</p>`
     const viv = (l) => (l || []).map((y, i) => [y, i]).filter(([y]) => vivo(y))
-    return `<div class="secciones"><details open><summary>Datos del trabajador</summary><form data-form="trabajador" data-id="${esc(t.id)}" class="form">${campos}<button class="primario">Guardar cambios</button></form></details>
-    <details open><summary>Sueldo (historial)</summary><table class="tabla"><thead><tr><th>Vigente desde</th><th class="n">Sueldo básico</th><th>Motivo</th></tr></thead><tbody>
+    return `<div class="secciones"><details data-id="f-1" open><summary>Datos del trabajador</summary><form data-form="trabajador" data-id="${esc(t.id)}" class="form">${campos}<button class="primario">Guardar cambios</button></form></details>
+    <details data-id="f-2" open><summary>Sueldo (historial)</summary><table class="tabla"><thead><tr><th>Vigente desde</th><th class="n">Sueldo básico</th><th>Motivo</th></tr></thead><tbody>
       ${viv(t.remuneraciones).map(([r]) => `<tr><td>${fecha(r.desde)}</td><td class="n">${s2(r.sueldo)}</td><td>${esc(r.motivo || '')}</td></tr>`).join('')}</tbody></table>
       <form data-form="sueldo" data-id="${esc(t.id)}" class="form"><label>Nuevo sueldo S/ <input type="number" name="sueldo" step="0.01" min="0" required></label>
         <label>Vigente desde <input type="date" name="desde" required></label><label class="ancho">Motivo <input name="motivo" placeholder="Aumento, ascenso, nueva RMV…"></label><button>Registrar cambio de sueldo</button></form>
       <p class="sub">Si cambia a mitad de mes, el sueldo del mes se pondera por días (R-06).</p></details>
-    <details><summary>Conceptos fijos mensuales (${viv(t.fijos).length})</summary><table class="tabla"><thead><tr><th>Concepto</th><th class="n">Monto</th><th>Desde</th><th>Hasta</th><th></th></tr></thead><tbody>
+    <details data-id="f-3"><summary>Conceptos fijos mensuales (${viv(t.fijos).length})</summary><table class="tabla"><thead><tr><th>Concepto</th><th class="n">Monto</th><th>Desde</th><th>Hasta</th><th></th></tr></thead><tbody>
       ${viv(t.fijos).map(([f, i]) => `<tr><td>${esc(nombreConcepto(f.concepto))}</td><td class="n">${s2(f.monto)}</td><td>${mesLargo(f.desde)}</td><td>${f.hasta ? mesLargo(f.hasta) : 'indefinido'}</td>
         <td>${f.hasta ? '' : `<button class="enlace" data-accion="terminarFijo" data-id="${esc(t.id)}" data-i="${i}">Terminar</button>`} <button class="enlace mal" data-accion="anularFijo" data-id="${esc(t.id)}" data-i="${i}">Anular</button></td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin conceptos fijos.</td></tr>'}</tbody></table>
       <form data-form="fijo" data-id="${esc(t.id)}" class="form"><label>Concepto <select name="concepto" required>${opciones(D.conceptos.filter((c) => c.manual && c.tipo === 'ingreso').map((c) => [c.codigo, c.nombre]), '', 'Elige')}</select></label>
         <label>Monto mensual S/ <input type="number" name="monto" step="0.01" min="0.01" required></label><label>Desde (mes) <input type="month" name="desde" required></label><button>Agregar</button></form></details>
-    <details><summary>Rentas de quinta del año fuera del sistema (${viv(t.quinta_previa).length})</summary><table class="tabla"><thead><tr><th>Año</th><th class="n">Renta bruta</th><th class="n">Retención</th><th>Detalle</th><th></th></tr></thead><tbody>
+    <details data-id="f-4"><summary>Rentas de quinta del año fuera del sistema (${viv(t.quinta_previa).length})</summary><table class="tabla"><thead><tr><th>Año</th><th class="n">Renta bruta</th><th class="n">Retención</th><th>Detalle</th><th></th></tr></thead><tbody>
       ${viv(t.quinta_previa).map(([q, i]) => `<tr><td>${q.anio}</td><td class="n">${s2(q.renta)}</td><td class="n">${s2(q.retencion)}</td><td>${esc(q.detalle || '')}</td><td><button class="enlace mal" data-accion="anularQuinta" data-id="${esc(t.id)}" data-i="${i}">Anular</button></td></tr>`).join('') || '<tr><td colspan="5" class="vacio">Sin registros.</td></tr>'}</tbody></table>
       <form data-form="quinta" data-id="${esc(t.id)}" class="form"><label>Año <input type="number" name="anio" required value="${ui.periodo.slice(0, 4)}"></label><label>Renta bruta S/ <input type="number" name="renta" step="0.01" min="0" required></label>
         <label>Retención S/ <input type="number" name="retencion" step="0.01" min="0" required value="0"></label><label class="ancho">Detalle <input name="detalle" placeholder="Certificado de otro empleador, planillas previas…"></label><button>Agregar</button></form>
       <p class="sub">Para quien ingresó en el año o tenía meses fuera del sistema: lo percibido y retenido en el año (certificado de rentas). Cero si no tuvo (R-14, R-25).</p></details>
-    <details><summary>Saldo inicial de vacaciones</summary><form data-form="saldoVac" data-id="${esc(t.id)}" class="form"><label>Al <input type="date" name="al" required value="${esc(t.saldo_vacaciones?.al || e.inicio_planilla)}"></label>
+    <details data-id="f-5"><summary>Saldo inicial de vacaciones</summary><form data-form="saldoVac" data-id="${esc(t.id)}" class="form"><label>Al <input type="date" name="al" required value="${esc(t.saldo_vacaciones?.al || e.inicio_planilla)}"></label>
       <label>Días pendientes <input type="number" name="dias" step="0.5" min="0" required value="${t.saldo_vacaciones?.dias ?? 0}"></label><label class="ancho">Detalle <input name="detalle" value="${esc(t.saldo_vacaciones?.detalle || '')}"></label><button>Guardar saldo</button></form>
       <p class="sub">Días de vacaciones pendientes a esa fecha (de los años ya cumplidos), para quien ingresó antes de usar el sistema (R-20).</p></details>
-    <details ${t.fecha_cese ? 'open' : ''}><summary>Cese</summary><form data-form="cese" data-id="${esc(t.id)}" class="form"><label>Fecha de cese <input type="date" name="fecha_cese" value="${esc(t.fecha_cese)}"></label>
+    <details data-id="f-6" ${t.fecha_cese ? 'open' : ''}><summary>Cese</summary><form data-form="cese" data-id="${esc(t.id)}" class="form"><label>Fecha de cese <input type="date" name="fecha_cese" value="${esc(t.fecha_cese)}"></label>
       <label>Motivo <select name="motivo_cese">${opciones(D.motivosCese.map((m) => [m.codigo, m.nombre]), t.motivo_cese, '—')}</select></label>
       <button class="primario">${t.fecha_cese ? 'Actualizar cese' : 'Registrar cese'}</button>${t.fecha_cese ? ' <button type="button" data-accion="verLiquidacion" data-id="' + esc(t.id) + '">Ver liquidación</button>' : ''}</form>
       <p class="sub">Con el cese se calcula la liquidación (Liquidaciones). Para anular el cese, deja la fecha vacía y guarda.</p></details>
-    <details><summary>Anular trabajador</summary><p class="sub">Solo para un registro hecho por error (no para un cese). Queda en el historial con su motivo.</p>
+    <details data-id="f-7"><summary>Anular trabajador</summary><p class="sub">Solo para un registro hecho por error (no para un cese). Queda en el historial con su motivo.</p>
       <button class="mal" data-accion="anularTrabajador" data-id="${esc(t.id)}">Anular este registro</button></details></div>`
   }
 
   // ---------------------------------------------------------------- Acciones
-  const pedirMotivo = (q) => { const m = prompt(q); if (m == null) return null; if (!m.trim()) { avisar('El motivo es obligatorio.', 'error'); return null } return m.trim() }
+  /** Ventana de confirmación propia (reemplaza confirm/prompt del navegador). Devuelve true, el texto ingresado o null si se cancela. */
+  function preguntar({ titulo, texto, campo, valor = '', boton = 'Aceptar', peligro = false }) {
+    return new Promise((listo) => {
+      const d = $('#pregunta')
+      d.innerHTML = `<form method="dialog" class="pregunta"><h3>${esc(titulo)}</h3>${texto ? `<p>${esc(texto)}</p>` : ''}
+        ${campo === 'mes' ? `<input type="month" name="r" required value="${esc(valor)}">` : campo ? `<textarea name="r" rows="3" required placeholder="Escribe el motivo">${esc(valor)}</textarea>` : ''}
+        <div class="botones"><button value="no" formnovalidate>Cancelar</button><button value="si" class="${peligro ? 'peligro' : 'primario'}">${esc(boton)}</button></div></form>`
+      d.onclose = () => { const r = d.querySelector('[name=r]'); listo(d.returnValue === 'si' ? (r ? r.value.trim() || null : true) : null) }
+      d.returnValue = ''; d.showModal(); (d.querySelector('[name=r]') || d.querySelector('button.primario, button.peligro')).focus()
+    })
+  }
+  const pedirMotivo = (texto, titulo = 'Anular registro') => preguntar({ titulo, texto, campo: 'texto', boton: 'Anular', peligro: true })
   const anularRegistro = (x, motivo) => { x.anulado = true; x.anulado_en = new Date().toISOString(); x.anulado_motivo = motivo }
   function descargar(nombre, contenido, tipo) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([contenido], { type: tipo })); a.download = nombre
@@ -511,7 +584,8 @@
   }
 
   const ACCIONES = {
-    tab: (d) => { ui.tab = d.tab; render() },
+    tab: (d) => { if (ui.tab !== d.tab) ui.q = ''; ui.tab = d.tab; ui.modal = null; render(); window.scrollTo(0, 0) },
+    mas: () => { ui.modal = { tipo: 'mas' }; renderModal() },
     sub: (d) => { ui.sub = d.sub; render() },
     semestre: (d) => { const k = d.tipo === 'cts' ? 'semCts' : 'semGrati'; ui[k] = F.sumarMeses(ui[k], Number(d.paso)); render() },
     cerrarModal: () => { ui.modal = null; renderModal() },
@@ -538,36 +612,38 @@
       }))
       descargar(`planilla-${emp().ruc}-${ui.periodo.slice(0, 7)}.csv`, '﻿' + filas.join('\r\n'), 'text/csv')
     },
-    cerrar: () => {
+    cerrar: async () => {
       const e = emp()
-      if (!confirm(`¿Cerrar la planilla de ${mesLargo(ui.periodo)}? Se emiten las boletas y las novedades del mes quedan bloqueadas.`)) return
+      if (!(await preguntar({ titulo: `Cerrar la planilla de ${mesLargo(ui.periodo)}`, boton: 'Cerrar y emitir boletas',
+        texto: 'Se emiten las boletas del mes y sus novedades quedan bloqueadas. Para cambiar algo después habrá que reabrir el mes.' }))) return
       estado.cierres.push(M.cerrar(e.id, ui.periodo, 'usuario'))
       guardar(`Cerró la planilla de ${mesLargo(ui.periodo)} (${e.razon_social})`); avisar('Planilla cerrada: boletas emitidas.')
     },
-    reabrir: () => {
-      const ci = cierreDe(emp().id, ui.periodo), motivo = pedirMotivo(`Reabrir ${mesLargo(ui.periodo)} anula sus boletas emitidas. ¿Motivo?`)
+    reabrir: async () => {
+      const ci = cierreDe(emp().id, ui.periodo), motivo = await preguntar({ titulo: `Reabrir ${mesLargo(ui.periodo)}`, campo: 'texto', boton: 'Reabrir', peligro: true,
+        texto: 'Las boletas emitidas del mes quedan anuladas (con este motivo) y se vuelven a emitir al cerrar de nuevo.' })
       if (!motivo) return
       anularRegistro(ci, motivo); guardar(`Reabrió la planilla de ${mesLargo(ui.periodo)}: ${motivo}`)
     },
-    anular: (d) => {
+    anular: async (d) => {
       const x = estado[d.col].find((y) => y.id === d.id), tid = x.trabajador_id
       exigirAbierto(empDeTrab(tid), x.desde || x.fecha || x.periodo, x.hasta || x.fecha || x.periodo)
-      const motivo = pedirMotivo('Motivo de la anulación:'); if (!motivo) return
+      const motivo = await pedirMotivo('Motivo de la anulación:'); if (!motivo) return
       anularRegistro(x, motivo); guardar(`Anuló ${d.col} de ${trab(tid)?.apellidos_nombres}: ${motivo}`)
     },
-    anularRemype: (d) => { const motivo = pedirMotivo('Motivo de la anulación de la inscripción:'); if (!motivo) return; anularRegistro(emp().remype[Number(d.i)], motivo); guardar('Anuló una inscripción REMYPE: ' + motivo) },
-    terminarFijo: (d) => {
-      const t = trab(d.id), f = t.fijos[Number(d.i)], h = prompt('Último mes en que se paga (AAAA-MM):', ui.periodo.slice(0, 7))
+    anularRemype: async (d) => { const motivo = await pedirMotivo('Motivo de la anulación de la inscripción:'); if (!motivo) return; anularRegistro(emp().remype[Number(d.i)], motivo); guardar('Anuló una inscripción REMYPE: ' + motivo) },
+    terminarFijo: async (d) => {
+      const t = trab(d.id), f = t.fijos[Number(d.i)], h = await preguntar({ titulo: `Terminar ${nombreConcepto(f.concepto)}`, texto: 'Último mes en que se paga:', campo: 'mes', valor: ui.periodo.slice(0, 7), boton: 'Terminar' })
       if (!h) return
       if (!/^\d{4}-\d{2}$/.test(h) || h + '-01' < f.desde) throw new Error('Mes inválido (AAAA-MM, no antes del inicio).')
       exigirAbierto(t.empleador_id, h + '-01'); f.hasta = h + '-01'; guardar(`Terminó ${f.concepto} de ${t.apellidos_nombres} en ${h}`)
     },
-    anularFijo: (d) => { const t = trab(d.id), f = t.fijos[Number(d.i)]; exigirAbierto(t.empleador_id, f.desde, f.hasta || f.desde); const m = pedirMotivo('Motivo:'); if (!m) return; anularRegistro(f, m); guardar(`Anuló ${f.concepto} de ${t.apellidos_nombres}`) },
-    anularQuinta: (d) => { const t = trab(d.id), m = pedirMotivo('Motivo:'); if (!m) return; anularRegistro(t.quinta_previa[Number(d.i)], m); guardar(`Anuló renta de quinta previa de ${t.apellidos_nombres}`) },
-    anularTrabajador: (d) => {
+    anularFijo: async (d) => { const t = trab(d.id), f = t.fijos[Number(d.i)]; exigirAbierto(t.empleador_id, f.desde, f.hasta || f.desde); const m = await pedirMotivo('Motivo:'); if (!m) return; anularRegistro(f, m); guardar(`Anuló ${f.concepto} de ${t.apellidos_nombres}`) },
+    anularQuinta: async (d) => { const t = trab(d.id), m = await pedirMotivo('Motivo:'); if (!m) return; anularRegistro(t.quinta_previa[Number(d.i)], m); guardar(`Anuló renta de quinta previa de ${t.apellidos_nombres}`) },
+    anularTrabajador: async (d) => {
       const t = trab(d.id)
       if (estado.cierres.some((c) => vivo(c) && c.boletas.some((b) => b.trabajador_id === t.id))) throw new Error('Tiene boletas emitidas: no se puede anular. Registra su cese.')
-      const m = pedirMotivo(`¿Anular el registro de ${t.apellidos_nombres}? Motivo:`); if (!m) return
+      const m = await pedirMotivo(`¿Anular el registro de ${t.apellidos_nombres}? Motivo:`); if (!m) return
       anularRegistro(t, m); ui.modal = null; guardar(`Anuló el registro de ${t.apellidos_nombres}: ${m}`)
     },
     exportarJson: () => exportarJson(),
@@ -693,7 +769,8 @@
     json: async (v) => {
       const nuevo = JSON.parse(await v.archivo.text())
       if (!Array.isArray(nuevo.trabajadores) || !Array.isArray(nuevo.empleadores)) throw new Error('El archivo no es un respaldo del Sistema de Planilla.')
-      if (estado.empleadores.length && !confirm('Se reemplazarán los datos de este navegador por los del respaldo. Antes se descargará un respaldo de lo actual. ¿Continuar?')) return null
+      if (estado.empleadores.length && !(await preguntar({ titulo: 'Restaurar respaldo', boton: 'Restaurar', peligro: true,
+        texto: 'Se reemplazarán los datos de este navegador por los del respaldo. Antes se descargará un respaldo de lo actual.' }))) return null
       if (estado.empleadores.length) exportarJson('-antes-de-restaurar')
       estado = completar(nuevo); ui.empleador = null; ui.periodo = null
       return 'Restauró un respaldo'
@@ -701,20 +778,25 @@
   }
 
   // ---------------------------------------------------------------- Eventos
-  document.addEventListener('click', (ev) => {
+  document.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-accion]'); if (!b) return
     ev.preventDefault()
-    try { ACCIONES[b.dataset.accion](b.dataset) } catch (err) { avisar(err.message, 'error') }
+    try { await ACCIONES[b.dataset.accion](b.dataset) } catch (err) { avisar(err.message, 'error') }
   })
+  document.addEventListener('keydown', (ev) => { if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('tr[data-accion]')) { ev.preventDefault(); ev.target.click() } })
+  document.addEventListener('input', (ev) => { if (ev.target.closest('.buscador')) filtrar(ev.target.value) })
   document.addEventListener('submit', async (ev) => {
     const f = ev.target.closest('form[data-form]'); if (!f) return
     ev.preventDefault()
     const fd = new FormData(f), v = {}
     for (const [k, x] of fd.entries()) v[k] = x
+    const btn = f.querySelector('button:not([type=button])'), txt = btn?.innerHTML
+    if (btn) { btn.disabled = true; btn.textContent = 'Procesando…' }
     try {
       const accion = await FORMS[f.dataset.form](v, f.dataset)
       if (accion) { guardar(accion); if (!['excel', 'json', 'simular'].includes(f.dataset.form)) avisar('Guardado.') }
     } catch (err) { console.error(err); avisar(err.message, 'error') }
+    finally { if (btn && btn.isConnected) { btn.disabled = false; btn.innerHTML = txt } }
   })
   $('#selEmpleador').addEventListener('change', (ev) => { ui.empleador = ev.target.value; ui.periodo = null; render() })
   $('#selPeriodo').addEventListener('change', (ev) => { if (ev.target.value) { ui.periodo = ev.target.value + '-01'; ui.semGrati = null; ui.semCts = null; render() } })
