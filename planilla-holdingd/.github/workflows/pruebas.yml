@@ -1,4 +1,4 @@
-# Cada cambio se verifica solo: reglas en Postgres + compilación de la app.
+# Cada cambio se verifica solo: reglas en Postgres, motor JavaScript de la versión HTML y compilación de la app.
 # (Se activa cuando Planillas vive en su propio repositorio.)
 name: Pruebas
 on:
@@ -23,6 +23,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: ./db/tests/run.sh
+  html:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node html/pruebas/motor.test.js
+      - run: node html/construir.js
   app:
     runs-on: ubuntu-latest
     defaults:

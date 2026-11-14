@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistema de Planilla HoldingD</title>
+<style>
+:root {
+  --fondo: #f4f5f7; --s1: #ffffff; --s2: #f8f9fb; --linea: #dfe3e8; --texto: #1d2430; --suave: #5d6878;
+  --marca: #1f4e79; --marca-2: #2b6cb0; --ok: #1f7a4d; --aviso: #a86200; --mal: #b42318;
+  --ok-f: #e8f5ee; --aviso-f: #fff4e0; --mal-f: #fdecea; --radio: 8px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); color: var(--texto); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { position: sticky; top: 0; z-index: 10; background: var(--marca); color: #fff; }
+.barra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 10px 16px; }
+.barra h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .2px; margin-right: auto; }
+.barra select, .barra input { font: inherit; padding: 5px 8px; border-radius: 6px; border: 1px solid #ffffff55; background: #ffffff18; color: #fff; }
+.barra select option { color: #000; }
+.barra .mes { display: flex; align-items: center; gap: 4px; }
+.barra .mes button { background: #ffffff18; color: #fff; border-color: #ffffff55; padding: 4px 9px; }
+#tabs { display: flex; gap: 2px; overflow-x: auto; padding: 0 12px; background: #173d60; }
+.tab { background: none; border: 0; color: #cfe0f1; padding: 9px 13px; border-radius: 0; border-bottom: 3px solid transparent; white-space: nowrap; }
+.tab.activo { color: #fff; border-bottom-color: #8cc4ff; font-weight: 600; }
+main { max-width: 1320px; margin: 0 auto; padding: 16px; }
+h2 { font-size: 20px; margin: 0; } h3 { font-size: 15px; margin: 0 0 10px; } h4 { margin: 16px 0 6px; font-size: 13px; }
+.cabecera-vista { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.tarjeta { background: var(--s1); border: 1px solid var(--linea); border-radius: var(--radio); padding: 14px; margin-bottom: 14px; }
+.inicio { max-width: 720px; margin: 40px auto; text-align: center; padding: 28px; }
+.rejilla2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 14px; align-items: start; }
+.rejilla2 > .tarjeta { margin: 0; }
+.datos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.dato { background: var(--s1); border: 1px solid var(--linea); border-radius: var(--radio); padding: 10px 12px; }
+.dato-t { font-size: 12px; color: var(--suave); } .dato-v { font-size: 18px; font-weight: 650; } .dato-s { font-size: 11px; color: var(--suave); }
+button { font: inherit; cursor: pointer; border: 1px solid var(--linea); background: var(--s1); color: var(--texto); padding: 6px 12px; border-radius: 6px; }
+button:hover:not(:disabled) { border-color: var(--marca-2); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.primario { background: var(--marca-2); border-color: var(--marca-2); color: #fff; }
+button.mal { color: var(--mal); }
+button.enlace { border: 0; background: none; padding: 2px 4px; color: var(--marca-2); text-decoration: underline; }
+button.enlace.mal { color: var(--mal); }
+.fila-botones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.chip { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--s2); border: 1px solid var(--linea); }
+.chip.ok { background: var(--ok-f); color: var(--ok); border-color: #b7dfc8; } .chip.aviso { background: var(--aviso-f); color: var(--aviso); border-color: #f1d29b; }
+.ok { color: var(--ok); } .aviso { color: var(--aviso); } .mal { color: var(--mal); }
+.alerta { padding: 10px 12px; border-radius: var(--radio); margin-bottom: 12px; } .alerta.mal { background: var(--mal-f); border: 1px solid #f3b8b2; }
+.sub { color: var(--suave); font-size: 12px; }
+p.sub { margin: 8px 0; }
+.tabla-env { overflow-x: auto; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabla th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; color: var(--suave); font-weight: 600; padding: 7px 8px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+.tabla td { padding: 7px 8px; border-bottom: 1px solid var(--linea); vertical-align: top; }
+.tabla tfoot td { font-weight: 650; background: var(--s2); }
+.tabla .n, .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabla tr.apagado td { color: var(--suave); }
+.vacio { color: var(--suave); text-align: center; padding: 16px !important; }
+.obs { margin: 0; padding-left: 18px; } .obs li { margin: 3px 0; } .obs li.bloquea { color: var(--mal); }
+.lista { margin: 6px 0 12px; padding-left: 18px; } .auditoria li { margin: 2px 0; }
+.form { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px 12px; align-items: end; margin: 10px 0; }
+.form fieldset { display: contents; border: 0; }
+.form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--suave); }
+.form label.ancho, .form .ancho { grid-column: 1 / -1; }
+.form label.check { flex-direction: row; align-items: center; gap: 6px; color: var(--texto); grid-column: span 2; }
+input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--linea); border-radius: 6px; background: #fff; color: var(--texto); min-width: 0; }
+input:focus, select:focus { outline: 2px solid #8cc4ff; border-color: var(--marca-2); }
+input.corto { width: 74px; }
+.form-tasas label input { width: 100%; }
+.form-tasas fieldset { border: 0; padding: 0; margin: 0; } .form-tasas label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--suave); margin: 10px 0; }
+.subtabs { display: flex; flex-wrap: wrap; gap: 4px; } .subtabs button.activo { background: var(--marca); color: #fff; border-color: var(--marca); }
+dialog#modal { width: min(980px, calc(100vw - 24px)); max-height: calc(100vh - 32px); border: 0; border-radius: 10px; padding: 0; box-shadow: 0 20px 50px #0004; }
+dialog::backdrop { background: #0f1a2a88; }
+.modal-cab { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--linea); position: sticky; top: 0; background: #fff; z-index: 1; }
+.modal-cab h3 { margin: 0; } .modal-cuerpo { padding: 14px 16px; } .modal-pie { padding: 10px 16px; border-top: 1px solid var(--linea); text-align: right; position: sticky; bottom: 0; background: #fff; }
+.secciones details { border: 1px solid var(--linea); border-radius: var(--radio); margin-bottom: 10px; padding: 0 12px; }
+.secciones summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+#toasts { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 100; max-width: min(440px, calc(100vw - 32px)); }
+.toast { padding: 10px 14px; border-radius: 8px; background: #1d2430; color: #fff; box-shadow: 0 6px 20px #0003; }
+.toast.error { background: var(--mal); }
+code { background: var(--s2); padding: 1px 4px; border-radius: 4px; font-size: 12px; }
+footer { text-align: center; color: var(--suave); font-size: 12px; padding: 20px; }
+/* Boleta y liquidación (formato HoldingD) */
+.boleta { background: #fff; color: #000; font-size: 11.5px; padding: 10px; border: 1px solid #ccc; }
+.boleta .borrador { border: 1px solid #e3a59f; background: #fdecea; color: #b42318; text-align: center; font-weight: 700; letter-spacing: 1px; font-size: 11px; margin-bottom: 6px; padding: 2px; }
+.b-cab { display: flex; justify-content: space-between; gap: 12px; } .b-cab .der { text-align: right; } .b-tit { font-size: 14px; font-weight: 700; }
+.b-tab { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.b-tab td, .b-tab th { border: 1px solid #0004; padding: 2px 6px; vertical-align: top; }
+.b-tab th { background: #0000000d; font-size: 10px; text-transform: uppercase; text-align: left; } .b-tab th.n, .b-tab td.n { text-align: right; }
+.b-tab .cod { width: 46px; } .b-tab tr.tot td { font-weight: 650; } .b-tab tr.neto td { font-weight: 800; }
+.boleta .k { font-size: 9.5px; color: #555; text-transform: uppercase; }
+.firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 34px; text-align: center; font-size: 11px; }
+.firmas div { border-top: 1px solid #0008; padding-top: 3px; }
+#impresion { display: none; }
+@media (max-width: 640px) { .barra h1 { width: 100%; } .form label.check { grid-column: 1 / -1; } }
+@media print {
+  @page { size: A4; margin: 10mm; }
+  body { background: #fff; }
+  body > *:not(#impresion) { display: none !important; }
+  #impresion { display: block; }
+  .hoja { page-break-after: always; break-after: page; }
+  .hoja:last-child { page-break-after: auto; break-after: auto; }
+  .boleta { border: 0; padding: 0; page-break-inside: avoid; }
+  .corte { border-top: 1px dashed #999; margin: 8mm 0; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="barra">
+    <h1>Sistema de Planilla HoldingD</h1>
+    <label class="sr"><select id="selEmpleador" aria-label="Empleador"></select></label>
+    <div class="mes"><button id="mesAnt" aria-label="Mes anterior">◀</button><input type="month" id="selPeriodo" aria-label="Periodo"><button id="mesSig" aria-label="Mes siguiente">▶</button></div>
+  </div>
+  <nav id="tabs"></nav>
+</header>
+<main><div id="avisoGuardado"></div><div id="vista"></div></main>
+<footer>Sistema de Planilla HoldingD · régimen laboral peruano (general, pequeña y microempresa) · los datos se guardan solo en este navegador: exporta respaldos desde <b>Datos</b>.</footer>
+<dialog id="modal"></dialog>
+<div id="toasts" aria-live="polite"></div>
+<div id="impresion"></div>
+<!-- motor y datos (construir.js los inserta aquí en la versión de un solo archivo) -->
+<script src="datos.js"></script>
+<script src="motor.js"></script>
+<script src="importar.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

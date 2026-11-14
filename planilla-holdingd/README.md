@@ -14,6 +14,10 @@ régimen laboral (MYPE pequeña/micro y régimen general), en soles:
 
 No comparte base, usuarios ni código con ningún otro sistema.
 
+**Versión HTML (la más simple de usar e integrar):** [`html/dist/sistema-planilla-holdingd.html`](html/dist/sistema-planilla-holdingd.html)
+se abre con doble clic, sin servidor ni base de datos, y calcula exactamente lo mismo. Su motor
+(`html/motor.js`) es JavaScript puro para usarlo dentro de otro ERP. Ver [`html/LEEME.md`](html/LEEME.md).
+
 - **Qué hace y por qué:** [`spec/`](spec/README.md) (reglas R-01…R-29).
 - **Reglas para quien programe:** [`CLAUDE.md`](CLAUDE.md).
 - **Integración con el ERP de personal:** [`docs/integracion.md`](docs/integracion.md).
@@ -26,6 +30,7 @@ No comparte base, usuarios ni código con ningún otro sistema.
 | `db/migrations/` | Base de datos: tablas, cálculo en vistas SQL, cierre, API (Postgres / Supabase) |
 | `db/tests/` | Pruebas de cada regla con casos calculados a mano |
 | `db/local/` | Lo mínimo para correr en local (roles de Supabase, usuarios y datos de demostración) |
+| `html/` | Versión HTML de un solo archivo + motor JavaScript sin dependencias (mismas reglas, mismas pruebas) |
 | `app/` | Pantallas (React + TypeScript + supabase-js) |
 | `etl/` | Carga inicial desde la planilla en Excel |
 | `data/` | Excel y SQL con datos de trabajadores (**no se versiona**) |

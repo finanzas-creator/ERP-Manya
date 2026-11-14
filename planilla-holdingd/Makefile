@@ -4,7 +4,7 @@ POSTGREST ?= postgrest
 export PGUSER ?= root
 export PGHOST ?= /var/run/postgresql
 
-.PHONY: db test demo api app tipos publicar-base cargar publicar-app
+.PHONY: db test test-html html demo api app tipos publicar-base cargar publicar-app
 
 db:
 	dropdb --force --if-exists $(DB) && createdb $(DB)
@@ -12,8 +12,15 @@ db:
 	for f in db/migrations/*.sql; do $(PSQL) -d $(DB) -f $$f || exit 1; done
 	$(PSQL) -d $(DB) -f db/local/usuarios_dev.sql
 
-test:
+test: test-html
 	./db/tests/run.sh
+
+# Versión HTML: pruebas del motor JavaScript y archivo único html/dist/sistema-planilla-holdingd.html
+test-html:
+	node html/pruebas/motor.test.js
+
+html: test-html
+	node html/construir.js
 
 # Empleador y trabajadores ficticios para ver las pantallas (después de make db).
 demo:
