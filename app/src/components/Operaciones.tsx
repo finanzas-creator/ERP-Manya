@@ -4,10 +4,12 @@ import { ok, supabase } from '../lib/supabase'
 import { dinero, fecha, hoyISO } from '../lib/formato'
 import { useCuentas } from '../lib/catalogos'
 import { Boton, Campo, Input, MensajeError, Modal, Select, Tabla } from './ui'
+import { useOrigenSheet } from '../lib/origen'
 
 /** Pagos y devoluciones agrupados por operación bancaria (R-43, R-44). Se anula la operación entera. */
 export function Operaciones({ ventaId, cuotaIds, compacta }: { ventaId?: string; cuotaIds?: string[]; compacta?: boolean }) {
   const [anular, setAnular] = useState<string | null>(null)
+  const { puedeEditar } = useOrigenSheet()   // R-71
   const { data } = useQuery({
     queryKey: ['operaciones', ventaId ?? cuotaIds?.join(',')],
     enabled: !!ventaId || !!cuotaIds?.length,
@@ -27,7 +29,7 @@ export function Operaciones({ ventaId, cuotaIds, compacta }: { ventaId?: string;
         </> },
         { titulo: 'Monto', derecha: true, celda: (o) => <span className={o.es_devolucion ? 'text-critical' : ''}>{o.es_devolucion ? '− ' : ''}{dinero(o.monto, o.moneda_cuenta)}</span> },
         ...(compacta ? [] : [{ titulo: 'TC', derecha: true, celda: (o: NonNullable<typeof data>[number]) => (Number(o.tc) === 1 ? '—' : o.tc) }]),
-        { titulo: '', celda: (o) => <Boton variante="fantasma" onClick={() => setAnular(o.operacion!)}>Anular</Boton> },
+        { titulo: '', celda: (o) => puedeEditar('pago') && <Boton variante="fantasma" onClick={() => setAnular(o.operacion!)}>Anular</Boton> },
       ]} />
       {anular && <AnularOperacion operacion={anular} onCerrar={() => setAnular(null)} />}
     </>

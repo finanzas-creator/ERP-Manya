@@ -14,6 +14,9 @@ create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(coalesce(current_setting('request.jwt.claim.sub', true),
                 (current_setting('request.jwt.claims', true)::jsonb ->> 'sub')), '')::uuid
 $$;
+-- Lo mínimo de auth.users que leen las vistas de usuarios (R-83).
+create table if not exists auth.users (id uuid primary key, email text, invited_at timestamptz,
+  email_confirmed_at timestamptz, last_sign_in_at timestamptz);
 grant usage on schema public to anon, authenticated;
 -- Igual que Supabase: sin JIT (en estas consultas su compilación cuesta más de lo que ahorra).
 do $$ begin execute format('alter database %I set jit = off', current_database()); end $$;

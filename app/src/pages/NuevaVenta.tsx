@@ -5,8 +5,17 @@ import { useClientes, useConfig, useEquipos, useMarcas, usePersonas, usePlantill
 import { ok, supabase } from '../lib/supabase'
 import { hoyISO } from '../lib/formato'
 import { Boton, Campo, Card, Input, MensajeError, Select, Titulo } from '../components/ui'
+import { EnSheet } from '../components/EnSheet'
+import { useOrigenSheet } from '../lib/origen'
 
+// R-71: mientras el sheet sea la fuente, las ventas se registran allá.
 export default function NuevaVenta() {
+  const { puedeAgregar, desdeSheet } = useOrigenSheet()
+  if (puedeAgregar('venta')) return <Formulario />
+  return <><Titulo>Nueva venta</Titulo>{desdeSheet && <EnSheet que="Cada venta (contrato) con su plan de facturación" />}</>
+}
+
+function Formulario() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { data: clientes } = useClientes()

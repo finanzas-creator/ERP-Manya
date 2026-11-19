@@ -30,7 +30,7 @@ COSTOS
   planilla (persona, sub-área, equipo, costo) · herramienta_gasto · comision_pago
 
 CONTROL
-  usuario (rol) · auditoria · cierre_mensual
+  usuario (rol, activo; estado calculado con Auth: invitado / activo / desactivado, R-83) · auditoria · cierre_mensual
   referencia_sheet (totales que reportaba el sheet al migrar: un hecho, para validar)
 ```
 

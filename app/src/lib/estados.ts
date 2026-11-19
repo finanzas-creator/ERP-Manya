@@ -27,6 +27,9 @@ export const ESTADOS: Record<string, { label: string; tono: Tono }> = {
   compromiso_incumplido: { label: 'Compromiso incumplido', tono: 'critical' },
   seguimiento_atrasado: { label: 'Seguimiento atrasado', tono: 'warning' },
   en_gestion: { label: 'En gestión', tono: 'good' },
+  // usuario (R-83); 'activo' usa la etiqueta de arriba
+  invitado: { label: 'Invitado', tono: 'warning' },
+  desactivado: { label: 'Desactivado', tono: 'neutral' },
   // antigüedad (v_cobranza)
   al_dia: { label: 'Al día', tono: 'good' },
   '1-30': { label: '1–30 días', tono: 'warning' },

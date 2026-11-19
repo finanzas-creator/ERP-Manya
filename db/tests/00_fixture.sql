@@ -1,4 +1,6 @@
 -- Datos sintéticos mínimos para probar reglas. Se cargan una vez en la base de pruebas.
+-- Las reglas de operación se prueban como cuando el ERP sea la fuente; R-71 (registro en el sheet) se prueba en 45.
+update config set datos_desde_sheet = false;
 insert into empresa (nombre) values ('Templates'), ('Manya Media');
 insert into linea_negocio (nombre) values ('Performance'), ('Proyectos'), ('Inbound');
 insert into categoria (nombre, linea_id) values ('Performance', 1), ('UX/UI', 2), ('Gestión de medios', 1);

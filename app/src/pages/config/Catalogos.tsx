@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ok, supabase } from '../../lib/supabase'
 import { ENUMS } from '../../lib/db'
 import { Boton, Campo, Card, Input, MensajeError, Modal, Pestanas, Select, Tabla } from '../../components/ui'
+import { useOrigenSheet } from '../../lib/origen'
 
 /** Listas de valores del sistema (CLAUDE.md: catálogos en tablas). Nada se borra: se desactiva. */
 type Tipo = { enum: keyof typeof ENUMS } | { ref: Tabla; etiqueta: string } | 'texto' | 'si_no'
@@ -56,6 +57,9 @@ function useReferencia(tabla: Tabla | null, etiqueta: string) {
 function ListaCatalogo({ cat }: { cat: Catalogo }) {
   const [editar, setEditar] = useState<Registro | null>(null)
   const [texto, setTexto] = useState('')
+  // R-71: los catálogos que vienen del sheet se corrigen allá; aquí solo lo que vive en el ERP
+  const { puedeAgregar, puedeEditar, desdeSheet } = useOrigenSheet()
+  const editable = cat.columnas.some((c) => puedeEditar(cat.tabla, c.campo)) || puedeEditar(cat.tabla)
   const { data } = useQuery({
     queryKey: ['catalogo', cat.tabla],
     queryFn: async () => ok(await supabase.from(cat.tabla).select('*').order('nombre')) as unknown as Registro[],
@@ -63,12 +67,12 @@ function ListaCatalogo({ cat }: { cat: Catalogo }) {
   const t = texto.toLowerCase()
   const filas = data?.filter((r) => !t || String(r.nombre).toLowerCase().includes(t))
   return (
-    <Card titulo={`${cat.titulo} · ${data?.length ?? 0}`} accion={<Boton variante="primario" onClick={() => setEditar({})}>+ Agregar</Boton>}>
+    <Card titulo={`${cat.titulo} · ${data?.length ?? 0}`} accion={puedeAgregar(cat.tabla) && <Boton variante="primario" onClick={() => setEditar({})}>+ Agregar</Boton>}>
       <div className="flex flex-wrap items-center gap-2 px-4 py-2">
-        <p className="flex-1 text-sm text-t2">{cat.ayuda}</p>
+        <p className="flex-1 text-sm text-t2">{cat.ayuda}{desdeSheet && !puedeAgregar(cat.tabla) && ' Esta lista viene del sheet administrativo: se corrige allá.'}</p>
         <Input placeholder="Buscar…" value={texto} onChange={(e) => setTexto(e.target.value)} className="w-full sm:max-w-56" />
       </div>
-      <Tabla filas={filas} clave={(r) => String(r.id)} onFila={(r) => setEditar(r)} compacta columnas={cat.columnas.map((c) => ({
+      <Tabla filas={filas} clave={(r) => String(r.id)} onFila={editable ? (r) => setEditar(r) : undefined} compacta columnas={cat.columnas.map((c) => ({
         titulo: c.label, celda: (r: Registro) => <Valor col={c} valor={r[c.campo]} />,
       }))} />
       {editar && <Editor cat={cat} registro={editar} onCerrar={() => setEditar(null)} />}
@@ -87,6 +91,7 @@ function Valor({ col, valor }: { col: Col; valor: unknown }) {
 function Editor({ cat, registro, onCerrar }: { cat: Catalogo; registro: Registro; onCerrar: () => void }) {
   const qc = useQueryClient()
   const nuevo = registro.id == null
+  const { puedeEditar } = useOrigenSheet()   // R-71
   const [f, setF] = useState<Registro>(() => Object.fromEntries(cat.columnas.map((c) => [c.campo, registro[c.campo] ?? (c.tipo === 'si_no' ? (c.campo === 'activo') : null)])))
   const guardar = useMutation({
     mutationFn: async () => {
@@ -102,7 +107,7 @@ function Editor({ cat, registro, onCerrar }: { cat: Catalogo; registro: Registro
   return (
     <Modal titulo={`${nuevo ? 'Agregar' : 'Editar'} · ${cat.titulo}`} onCerrar={onCerrar}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {cat.columnas.map((c) => <CampoCatalogo key={c.campo} col={c} valor={f[c.campo]} onCambio={(v) => setF({ ...f, [c.campo]: v })} />)}
+        {cat.columnas.map((c) => <CampoCatalogo key={c.campo} col={c} valor={f[c.campo]} fijo={!nuevo && !puedeEditar(cat.tabla, c.campo)} onCambio={(v) => setF({ ...f, [c.campo]: v })} />)}
       </div>
       {!nuevo && <p className="mt-3 text-xs text-t3">Para dejar de usar un valor, desmárcalo como activo: lo ya registrado lo conserva.</p>}
       <div className="mt-3"><MensajeError error={guardar.error} /></div>
@@ -114,23 +119,23 @@ function Editor({ cat, registro, onCerrar }: { cat: Catalogo; registro: Registro
   )
 }
 
-function CampoCatalogo({ col, valor, onCambio }: { col: Col; valor: unknown; onCambio: (v: unknown) => void }) {
+function CampoCatalogo({ col, valor, fijo, onCambio }: { col: Col; valor: unknown; fijo: boolean; onCambio: (v: unknown) => void }) {
   const ref = typeof col.tipo === 'object' && 'ref' in col.tipo ? col.tipo : null
   const opciones = useReferencia(ref?.ref ?? null, ref?.etiqueta ?? 'nombre')
   if (col.tipo === 'si_no') return (
-    <label className="flex items-center gap-2 self-end pb-2 text-sm"><input type="checkbox" checked={valor !== false} onChange={(e) => onCambio(e.target.checked)} />{col.label}</label>
+    <label className="flex items-center gap-2 self-end pb-2 text-sm"><input type="checkbox" checked={valor !== false} disabled={fijo} onChange={(e) => onCambio(e.target.checked)} />{col.label}</label>
   )
   if (ref) return (
-    <Campo label={col.label}><Select value={valor == null ? '' : String(valor)} onChange={(e) => onCambio(e.target.value === '' ? null : Number(e.target.value))}>
+    <Campo label={col.label}><Select value={valor == null ? '' : String(valor)} disabled={fijo} onChange={(e) => onCambio(e.target.value === '' ? null : Number(e.target.value))}>
       <option value="">{col.opcional ? '— Ninguna —' : 'Seleccionar…'}</option>
       {opciones.data?.map((o) => <option key={String(o.id)} value={String(o.id)}>{String(o[ref.etiqueta])}</option>)}
     </Select></Campo>
   )
   if (typeof col.tipo === 'object' && 'enum' in col.tipo) return (
-    <Campo label={col.label}><Select value={valor == null ? '' : String(valor)} onChange={(e) => onCambio(e.target.value || null)}>
+    <Campo label={col.label}><Select value={valor == null ? '' : String(valor)} disabled={fijo} onChange={(e) => onCambio(e.target.value || null)}>
       <option value="">Seleccionar…</option>
       {(ENUMS[col.tipo.enum] as readonly string[]).map((v) => <option key={v} value={v}>{v}</option>)}
     </Select></Campo>
   )
-  return <Campo label={col.label}><Input value={valor == null ? '' : String(valor)} onChange={(e) => onCambio(e.target.value)} /></Campo>
+  return <Campo label={col.label}><Input value={valor == null ? '' : String(valor)} disabled={fijo} onChange={(e) => onCambio(e.target.value)} /></Campo>
 }

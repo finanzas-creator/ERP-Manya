@@ -9,6 +9,8 @@ import { Boton, Campo, Card, Input, Kpi, MensajeError, Modal, Nota, Pestanas, Se
 import { AnularModal, type TablaAnulable } from '../components/Anular'
 import { Icono } from '../components/iconos'
 import type { Fila } from '../lib/db'
+import { useOrigenSheet } from '../lib/origen'
+import { EnSheet } from '../components/EnSheet'
 
 type Pestana = 'planilla' | 'herramientas' | 'comisiones'
 type Persona = Fila<'v_planilla_usd'>
@@ -33,6 +35,7 @@ export default function Costos() {
   return (
     <>
       <Titulo accion={<SelectorMes mes={mes} onCambio={setElegido} />}>Planilla y gastos</Titulo>
+      <EnSheet que="La planilla, las herramientas y las comisiones pagadas" plural />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Planilla" valor={usd(m?.planilla_usd)} detalle="costo empresa, en USD" onClick={() => setPestana('planilla')} />
         <Kpi label="Herramientas" valor={usd(m?.herramientas_usd)} detalle="suscripciones y servidores" onClick={() => setPestana('herramientas')} />
@@ -73,6 +76,7 @@ export default function Costos() {
 
 function CopiarMes({ tabla, mes, que }: { tabla: 'planilla' | 'herramienta_gasto'; mes: string; que: string }) {
   const qc = useQueryClient()
+  const { puedeAgregar } = useOrigenSheet()   // R-71
   const origen = sumarMeses(mes, -1)
   const copiar = useMutation({
     mutationFn: async () => ok(await supabase.rpc('copiar_costos_mes', { p_tabla: tabla, p_origen: origen, p_destino: mes })),
@@ -81,8 +85,10 @@ function CopiarMes({ tabla, mes, que }: { tabla: 'planilla' | 'herramienta_gasto
   return (
     <div className="flex flex-col items-center gap-2 px-4 py-8 text-center text-sm text-t2">
       <div>Aún no hay {que} en {mesLargo(mes)}.</div>
-      <Boton variante="primario" disabled={copiar.isPending} onClick={() => copiar.mutate()}>Copiar {que} de {mesLargo(origen)}</Boton>
-      <div className="text-xs text-t3">Se copia tal cual; luego ajusta montos, agrega o anula filas.</div>
+      {puedeAgregar(tabla) && <>
+        <Boton variante="primario" disabled={copiar.isPending} onClick={() => copiar.mutate()}>Copiar {que} de {mesLargo(origen)}</Boton>
+        <div className="text-xs text-t3">Se copia tal cual; luego ajusta montos, agrega o anula filas.</div>
+      </>}
       <MensajeError error={copiar.error} />
     </div>
   )
@@ -91,6 +97,7 @@ function CopiarMes({ tabla, mes, que }: { tabla: 'planilla' | 'herramienta_gasto
 // ---------------------------------------------------------------- Planilla
 function Planilla({ mes }: { mes: string }) {
   const [criterio, setCriterio] = useState<'sub_area' | 'tipo_recibo'>('sub_area')
+  const { puedeAgregar, puedeEditar } = useOrigenSheet()   // R-71
   const [editar, setEditar] = useState<Persona | 'nueva' | null>(null)
   const [anular, setAnular] = useState<Anulando | null>(null)
   const filas = useQuery({
@@ -109,7 +116,7 @@ function Planilla({ mes }: { mes: string }) {
     <Card titulo={<>Planilla de {mesLargo(mes)} {filas.data && <span className="font-normal text-t3">· {plural(filas.data.length, 'persona', 'personas')}</span>}</>}
       accion={<div className="flex flex-wrap items-center gap-2">
         <Pestanas valor={criterio} onCambio={setCriterio} opciones={[{ clave: 'sub_area', label: 'Por área' }, { clave: 'tipo_recibo', label: 'Por tipo de recibo' }]} />
-        <Boton onClick={() => setEditar('nueva')}><Icono nombre="mas" />Agregar</Boton>
+        {puedeAgregar('planilla') && <Boton onClick={() => setEditar('nueva')}><Icono nombre="mas" />Agregar</Boton>}
       </div>}>
       {vacia ? <CopiarMes tabla="planilla" mes={mes} que="planilla" /> : (
         <div className="overflow-x-auto">
@@ -121,7 +128,7 @@ function Planilla({ mes }: { mes: string }) {
             <tbody>
               {filas.data === undefined && <tr><td colSpan={7} className="px-4 py-6 text-center text-t3">Cargando…</td></tr>}
               {lista.map((g) => (
-                <GrupoPlanilla key={g.grupo} grupo={g} personas={deGrupo(g.grupo!)} onFila={setEditar} />
+                <GrupoPlanilla key={g.grupo} grupo={g} personas={deGrupo(g.grupo!)} onFila={puedeEditar('planilla') ? setEditar : undefined} />
               ))}
             </tbody>
           </table>
@@ -137,7 +144,7 @@ function Planilla({ mes }: { mes: string }) {
 }
 
 function GrupoPlanilla({ grupo, personas, onFila }:
-  { grupo: Fila<'v_planilla_grupo_mes'>; personas: Persona[]; onFila: (p: Persona) => void }) {
+  { grupo: Fila<'v_planilla_grupo_mes'>; personas: Persona[]; onFila?: (p: Persona) => void }) {
   return (
     <>
       <tr className="border-b border-line bg-s2">
@@ -146,7 +153,7 @@ function GrupoPlanilla({ grupo, personas, onFila }:
         <td className="num px-4 py-2 text-right font-semibold">{usd(grupo.costo_usd)}</td>
       </tr>
       {personas.map((p) => (
-        <tr key={p.id} onClick={() => onFila(p)} className="cursor-pointer border-b border-line last:border-0 hover:bg-s2">
+        <tr key={p.id} onClick={onFila && (() => onFila(p))} className={`${onFila ? 'cursor-pointer hover:bg-s2' : ''} border-b border-line last:border-0`}>
           <td className="px-4 py-2">{p.persona}</td>
           <td className="px-4 py-2 text-t2">{p.cargo}</td>
           <td className="px-4 py-2 text-t2">{p.tipo_recibo}</td>
@@ -242,6 +249,7 @@ function PlanillaModal({ mes, fila, sugerencias, onCerrar, onAnular }:
 // ---------------------------------------------------------------- Herramientas
 function Herramientas({ mes }: { mes: string }) {
   const [editar, setEditar] = useState<Herramienta | 'nueva' | null>(null)
+  const { puedeAgregar, puedeEditar } = useOrigenSheet()   // R-71
   const [anular, setAnular] = useState<Anulando | null>(null)
   const { data } = useQuery({
     queryKey: ['herramientas', mes],
@@ -249,9 +257,9 @@ function Herramientas({ mes }: { mes: string }) {
   })
   return (
     <Card titulo={<>Herramientas de {mesLargo(mes)} {data && <span className="font-normal text-t3">· {data.length}</span>}</>}
-      accion={<Boton onClick={() => setEditar('nueva')}><Icono nombre="mas" />Agregar</Boton>}>
+      accion={puedeAgregar('herramienta_gasto') && <Boton onClick={() => setEditar('nueva')}><Icono nombre="mas" />Agregar</Boton>}>
       {data?.length === 0 ? <CopiarMes tabla="herramienta_gasto" mes={mes} que="herramientas" /> : (
-        <Tabla filas={data} clave={(h) => h.id!} onFila={setEditar} columnas={[
+        <Tabla filas={data} clave={(h) => h.id!} onFila={puedeEditar('herramienta_gasto') ? setEditar : undefined} columnas={[
           { titulo: 'Herramienta', celda: (h) => <span className="font-medium">{h.nombre}</span> },
           { titulo: 'Tipo', celda: (h) => <span className="text-t2">{h.tipo}</span> },
           { titulo: 'Plan', celda: (h) => <span className="text-t2">{h.plan}</span> },
@@ -316,6 +324,7 @@ function HerramientaModal({ mes, fila, sugerencias, onCerrar, onAnular }:
 function Comisiones({ mes }: { mes: string }) {
   const [nueva, setNueva] = useState(false)
   const [anular, setAnular] = useState<Anulando | null>(null)
+  const { puedeAgregar, puedeEditar } = useOrigenSheet()   // R-71
   const personas = useQuery({
     queryKey: ['comision_persona', mes],
     queryFn: async () => ok(await supabase.from('v_comision_persona_mes').select('*').eq('periodo', mes).order('persona')),
@@ -334,9 +343,9 @@ function Comisiones({ mes }: { mes: string }) {
         ]} />
         <Nota>Ganado: comisión de las cuotas cuyo comprobante quedó pagado al 100% este mes (R-41). Pagado: lo registrado abajo (R-42).</Nota>
       </Card>
-      <Card titulo="Comisiones pagadas" accion={<Boton onClick={() => setNueva(true)}><Icono nombre="mas" />Registrar</Boton>}>
+      <Card titulo="Comisiones pagadas" accion={puedeAgregar('comision_pago') && <Boton onClick={() => setNueva(true)}><Icono nombre="mas" />Registrar</Boton>}>
         <Tabla filas={pagos.data} clave={(p) => p.id!} vacio="Sin pagos registrados este mes"
-          onFila={(p) => setAnular({ tabla: 'comision_pago', id: p.id!, titulo: `Anular comisión de ${p.persona}` })} columnas={[
+          onFila={puedeEditar('comision_pago') ? (p) => setAnular({ tabla: 'comision_pago', id: p.id!, titulo: `Anular comisión de ${p.persona}` }) : undefined} columnas={[
             { titulo: 'Persona', celda: (p) => p.persona },
             { titulo: 'Monto', derecha: true, celda: (p) => dinero(p.monto, p.moneda) },
             { titulo: 'USD', derecha: true, celda: (p) => usd(p.monto_usd) },

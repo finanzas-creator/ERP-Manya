@@ -5,12 +5,15 @@ import { ok, supabase } from '../lib/supabase'
 import { dinero, fecha, finDeMes, mesActual, usd } from '../lib/formato'
 import { Boton, Card, Estado, Input, Select, SelectorMes, Tabla, Titulo } from '../components/ui'
 import { Icono } from '../components/iconos'
+import { EnSheet } from '../components/EnSheet'
+import { useOrigenSheet } from '../lib/origen'
 
 const Evolucion = lazy(() => import('../components/EvolucionVentas'))
 
 const COLS = 'id, codigo, fecha_contrato, cliente, marca, servicio, categoria, modalidad, naturaleza, moneda, monto_neto, monto_neto_usd, estado_plan, estado_cobro, saldo'
 
 export default function Ventas() {
+  const { puedeAgregar } = useOrigenSheet()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [mes, setMes] = useState(params.get('mes') ?? mesActual())
@@ -35,7 +38,8 @@ export default function Ventas() {
 
   return (
     <>
-      <Titulo accion={<Link to="/ventas/nueva"><Boton variante="primario"><Icono nombre="mas" />Nueva venta</Boton></Link>}>Ventas</Titulo>
+      <Titulo accion={puedeAgregar('venta') && <Link to="/ventas/nueva"><Boton variante="primario"><Icono nombre="mas" />Nueva venta</Boton></Link>}>Ventas</Titulo>
+      <EnSheet que="Cada venta (contrato) con su plan de facturación" />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <SelectorMes mes={mes} onCambio={setMes} />
         <Input placeholder="Buscar cliente, marca, servicio…" value={texto} onChange={(e) => setTexto(e.target.value)} className="min-w-0 flex-1 sm:max-w-xs" />

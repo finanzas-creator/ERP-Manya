@@ -25,6 +25,7 @@ const Costos = lazy(() => import('./pages/Costos'))
 const Revision = lazy(() => import('./pages/Revision'))
 const Configuracion = lazy(() => import('./pages/Configuracion'))
 const Validacion = lazy(() => import('./pages/Validacion'))
+const Usuarios = lazy(() => import('./pages/Usuarios'))
 
 type Acceso = 'todos' | 'opera' | 'admin'
 const NAV: { grupo: string; items: { a: string; label: string; icono: NombreIcono; acceso: Acceso }[] }[] = [
@@ -48,13 +49,15 @@ const NAV: { grupo: string; items: { a: string; label: string; icono: NombreIcon
     { a: '/revision', label: 'Revisión de datos', icono: 'revision', acceso: 'opera' },
     { a: '/validacion', label: 'Validación', icono: 'validacion', acceso: 'opera' },
     { a: '/configuracion', label: 'Configuración', icono: 'configuracion', acceso: 'admin' },
+    { a: '/usuarios', label: 'Usuarios', icono: 'usuarios', acceso: 'admin' },
   ] },
 ]
 
 export default function App() {
-  const { usuario, salir, debeCrearClave } = useSesion()
+  const { usuario, salir, debeCrearClave, sinAcceso } = useSesion()
   const [menu, setMenu] = useState(false)
   if (usuario === undefined) return <div className="p-8 text-t3">Cargando…</div>
+  if (sinAcceso) return <SinAcceso onSalir={salir} />
   if (usuario === null) return <Login />
   if (debeCrearClave) return <CrearClave />
   const opera = puedeOperar(usuario.rol)
@@ -121,10 +124,24 @@ export default function App() {
                 <Route path="/validacion" element={<Validacion />} />
               </>}
               {admin && <Route path="/configuracion" element={<Configuracion />} />}
+              {admin && <Route path="/usuarios" element={<Usuarios />} />}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Suspense>
         </main>
+      </div>
+    </div>
+  )
+}
+
+// R-83: entró con su correo, pero su usuario está desactivado (o aún no tiene rol).
+function SinAcceso({ onSalir }: { onSalir: () => void }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="w-full max-w-sm rounded-xl border border-line bg-s1 p-6">
+        <h1 className="text-lg font-semibold">Manya ERP</h1>
+        <p className="mt-2 mb-5 text-sm text-t2">Tu usuario no tiene acceso en este momento. Pide al administrador que lo active desde Usuarios.</p>
+        <Boton onClick={onSalir}>Salir</Boton>
       </div>
     </div>
   )

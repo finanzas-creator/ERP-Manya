@@ -12,6 +12,8 @@ import { CuotaModal } from '../components/CuotaModal'
 import { Operaciones } from '../components/Operaciones'
 import { AutodetraccionModal, verConstancia } from '../components/Autodetraccion'
 import type { Fila } from '../lib/db'
+import { useOrigenSheet } from '../lib/origen'
+import { EnSheet } from '../components/EnSheet'
 
 type Cuota = Fila<'v_cuota'>
 type Anulacion = { tabla: TablaAnulable; id: string; titulo: string; onListo?: () => void }
@@ -26,6 +28,7 @@ export default function VentaDetalle() {
   const [editar, setEditar] = useState<Cuota | 'nueva' | null>(null)
   const [nuevoCosto, setNuevoCosto] = useState(false)
   const [autodetraccion, setAutodetraccion] = useState<{ id: string; descripcion: string } | null>(null)
+  const { puedeAgregar, puedeEditar } = useOrigenSheet()   // R-71
 
   const venta = useQuery({ queryKey: ['venta', id], queryFn: async () => ok(await supabase.from('v_venta').select('*').eq('id', id!).single()) })
   const cuotas = useQuery({ queryKey: ['cuotas', id], queryFn: async () => ok(await supabase.from('v_cuota').select('*').eq('venta_id', id!).order('orden')) })
@@ -60,13 +63,14 @@ export default function VentaDetalle() {
     <>
       <div className="mb-1 text-xs text-t3"><Link to="/ventas" className="hover:underline">Ventas</Link> / {v.codigo}</div>
       <Titulo accion={<div className="flex flex-wrap gap-2">
-        {v.modalidad === 'mensual' && v.fecha_fin && <Boton onClick={() => renovar.mutate()} disabled={renovar.isPending}>Renovar ciclo</Boton>}
-        {porFacturar.length > 0 && <Boton onClick={() => setEmitir(true)}>Emitir comprobante</Boton>}
-        <Boton variante="peligro" onClick={() => setAnular({ tabla: 'venta', id: v.id!, titulo: 'Anular venta', onListo: () => navigate('/ventas') })}>Anular</Boton>
+        {puedeAgregar('venta') && v.modalidad === 'mensual' && v.fecha_fin && <Boton onClick={() => renovar.mutate()} disabled={renovar.isPending}>Renovar ciclo</Boton>}
+        {puedeAgregar('comprobante') && porFacturar.length > 0 && <Boton onClick={() => setEmitir(true)}>Emitir comprobante</Boton>}
+        {puedeEditar('venta') && <Boton variante="peligro" onClick={() => setAnular({ tabla: 'venta', id: v.id!, titulo: 'Anular venta', onListo: () => navigate('/ventas') })}>Anular</Boton>}
       </div>}>
         {v.marca ?? v.cliente} · {v.servicio}
       </Titulo>
       <MensajeError error={renovar.error} />
+      <EnSheet que="La venta, sus cuotas, comprobantes y pagos" plural />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card titulo="Venta">
@@ -88,11 +92,11 @@ export default function VentaDetalle() {
 
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
           <Card titulo="Plan de pagos" accion={(v.cuotas ?? 0) === 0
-              ? <GenerarPlan ventaId={v.id!} />
+              ? puedeAgregar('cuota') && <GenerarPlan ventaId={v.id!} />
               : <div className="flex items-center gap-3">
                   {v.estado_plan !== 'cuadra' && <span className="num text-xs text-warning">
                     {v.estado_plan === 'falta_planificar' ? 'Falta planificar' : 'Excede la venta en'} {dinero(Math.abs(v.falta_planificar ?? 0), v.moneda)}</span>}
-                  <Boton onClick={() => setEditar('nueva')}>+ Cuota</Boton>
+                  {puedeAgregar('cuota') && <Boton onClick={() => setEditar('nueva')}>+ Cuota</Boton>}
                 </div>}>
             <Tabla<Cuota> filas={cuotas.data} clave={(c) => c.id!} columnas={[
               { titulo: 'Cuota', celda: (c) => <>
@@ -105,8 +109,8 @@ export default function VentaDetalle() {
               { titulo: 'Estado', celda: (c) => <Estado valor={c.estado} /> },
               { titulo: '', celda: (c) => (
                 <div className="flex justify-end gap-1">
-                  <Boton variante="fantasma" onClick={() => setEditar(c)}>Editar</Boton>
-                  {!c.pagada && <Boton onClick={() => setPagar(c)}>Pagar</Boton>}
+                  {puedeEditar('cuota') && <Boton variante="fantasma" onClick={() => setEditar(c)}>Editar</Boton>}
+                  {puedeAgregar('pago') && !c.pagada && <Boton onClick={() => setPagar(c)}>Pagar</Boton>}
                 </div>) },
             ]} />
           </Card>
@@ -120,15 +124,15 @@ export default function VentaDetalle() {
                 : <span className="text-t3">—</span> },
               { titulo: 'Saldo', derecha: true, celda: (c) => dinero(c.saldo, c.moneda) },
               { titulo: '', celda: (c) => <div className="flex justify-end gap-1">
-                {c.pagado_100 && (c.detraccion ?? 0) > (c.pagado_detraccion ?? 0) + 0.01 && !autodetracciones.data?.some((a) => a.comprobante_id === c.id && a.estado === 'conforme') &&
+                {puedeEditar('comprobante', 'autodetraccion_fecha') && c.pagado_100 && (c.detraccion ?? 0) > (c.pagado_detraccion ?? 0) + 0.01 && !autodetracciones.data?.some((a) => a.comprobante_id === c.id && a.estado === 'conforme') &&
                   <Boton variante="fantasma" onClick={() => setAutodetraccion({ id: c.id!, descripcion: `${c.serie_numero} · ${c.cliente}` })}>Autodetracción</Boton>}
                 {autodetracciones.data?.find((a) => a.comprobante_id === c.id)?.autodetraccion_constancia &&
                   <Boton variante="fantasma" onClick={() => verConstancia(autodetracciones.data!.find((a) => a.comprobante_id === c.id)!.autodetraccion_constancia!)}>Constancia</Boton>}
-                <Boton variante="fantasma" onClick={() => setAnular({ tabla: 'comprobante', id: c.id!, titulo: `Anular ${c.serie_numero ?? 'comanda'}` })}>Anular</Boton>
+                {puedeEditar('comprobante') && <Boton variante="fantasma" onClick={() => setAnular({ tabla: 'comprobante', id: c.id!, titulo: `Anular ${c.serie_numero ?? 'comanda'}` })}>Anular</Boton>}
               </div> },
             ]} />
           </Card>}
-          <CostosVenta ventaId={id!} terceros={v.naturaleza === 'terceros'} onAgregar={() => setNuevoCosto(true)}
+          <CostosVenta ventaId={id!} terceros={v.naturaleza === 'terceros'} editable={puedeAgregar('costo_directo')} onAgregar={() => setNuevoCosto(true)}
             onAnular={(c) => setAnular({ tabla: 'costo_directo', id: c.id!, titulo: 'Anular costo' })} />
           <Card titulo="Pagos recibidos">
             <Operaciones ventaId={id!} />
@@ -153,8 +157,8 @@ export default function VentaDetalle() {
 const TIPO_COSTO = { proveedor: 'Proveedor', consumo_pauta: 'Consumo de pauta' } as const
 
 /** Costos directos de la venta y su efecto: GP de la venta (R-61, R-63) o control de pauta (R-64). */
-function CostosVenta({ ventaId, terceros, onAgregar, onAnular }:
-  { ventaId: string; terceros: boolean; onAgregar: () => void; onAnular: (c: Fila<'v_costo_directo'>) => void }) {
+function CostosVenta({ ventaId, terceros, editable, onAgregar, onAnular }:
+  { ventaId: string; terceros: boolean; editable: boolean; onAgregar: () => void; onAnular: (c: Fila<'v_costo_directo'>) => void }) {
   const costos = useQuery({
     queryKey: ['costos-venta', ventaId],
     queryFn: async () => ok(await supabase.from('v_costo_directo').select('*').eq('venta_id', ventaId).order('fecha')),
@@ -169,14 +173,14 @@ function CostosVenta({ ventaId, terceros, onAgregar, onAnular }:
   })
   const g = gp.data, p = pauta.data
   return (
-    <Card titulo={terceros ? 'Consumo de pauta' : 'Costos y rentabilidad de la venta'} accion={<Boton onClick={onAgregar}>+ Costo</Boton>}>
+    <Card titulo={terceros ? 'Consumo de pauta' : 'Costos y rentabilidad de la venta'} accion={editable && <Boton onClick={onAgregar}>+ Costo</Boton>}>
       <div className="grid gap-4 md:grid-cols-5">
         <div className="min-w-0 md:col-span-3">
           <Tabla filas={costos.data} clave={(c) => c.id!} vacio={terceros ? 'Aún no se registra el consumo' : 'Sin costos de proveedor'} columnas={[
             { titulo: 'Fecha', celda: (c) => fecha(c.fecha) },
             { titulo: 'Tipo', celda: (c) => <><div>{TIPO_COSTO[c.tipo!]}</div>{c.descripcion && <div className="text-xs text-t3">{c.descripcion}</div>}</> },
             { titulo: 'Monto', derecha: true, celda: (c) => dinero(c.monto, c.moneda) },
-            { titulo: '', celda: (c) => <Boton variante="fantasma" onClick={() => onAnular(c)}>Anular</Boton> },
+            { titulo: '', celda: (c) => editable && <Boton variante="fantasma" onClick={() => onAnular(c)}>Anular</Boton> },
           ]} />
         </div>
         <div className="px-4 py-3 md:col-span-2 md:border-l md:border-line">

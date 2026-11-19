@@ -10,6 +10,8 @@ import { PagoModal } from '../components/Pago'
 import { AnularModal } from '../components/Anular'
 import { DevolucionModal, Operaciones } from '../components/Operaciones'
 import type { Fila } from '../lib/db'
+import { useOrigenSheet } from '../lib/origen'
+import { EnSheet } from '../components/EnSheet'
 
 type Comprobante = Fila<'v_facturacion'>
 const TIPOS: Record<string, string> = { factura: 'Factura', boleta: 'Boleta', recibo_honorarios: 'Recibo por honorarios', comanda: 'Comanda' }
@@ -42,6 +44,7 @@ export default function Facturacion() {
         {!todos && <SelectorMes mes={mes} onCambio={setMes} />}
         <Boton variante={todos ? 'primario' : 'normal'} onClick={() => setTodos(!todos)}>{todos ? 'Ver por mes' : 'Pendientes de cobro'}</Boton>
       </div>}>Facturación</Titulo>
+      <EnSheet que="Los comprobantes y los pagos" plural />
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Select value={empresa} onChange={(e) => setEmpresa(e.target.value)} aria-label="Empresa">
@@ -77,6 +80,7 @@ const ETIQUETA: Record<string, string> = { por_cobrar: 'Por cobrar', vencida: 'V
 function DetalleComprobante({ id, onCerrar }: { id: string; onCerrar: () => void }) {
   const qc = useQueryClient()
   const [accion, setAccion] = useState<'pago' | 'nota' | 'anular' | 'devolucion' | null>(null)
+  const { puedeAgregar, puedeEditar } = useOrigenSheet()   // R-71: pagos y comprobantes vienen del sheet
   const c = useQuery({ queryKey: ['comprobante', id], queryFn: async () => ok(await supabase.from('v_facturacion').select('*').eq('id', id).single()) }).data
   const cuotas = useQuery({ queryKey: ['comprobante-cuotas', id], queryFn: async () => ok(await supabase.from('cuota').select('id, venta_id, orden, concepto, monto_neto').eq('comprobante_id', id).is('anulado_en', null).order('orden')) })
   const ventas = useQuery({
@@ -117,14 +121,14 @@ function DetalleComprobante({ id, onCerrar }: { id: string; onCerrar: () => void
           Si en cambio pagó todo al banco, la agencia debe autodetraer (R-36).</p>}
 
       {vigente && <div className="mt-4 flex flex-wrap gap-2">
-        {(c.saldo ?? 0) > 0.01 && <Boton variante="primario" onClick={() => setAccion('pago')}>Registrar pago</Boton>}
+        {puedeAgregar('pago') && (c.saldo ?? 0) > 0.01 && <Boton variante="primario" onClick={() => setAccion('pago')}>Registrar pago</Boton>}
         <Boton onClick={() => setAccion('nota')}>Nota de crédito</Boton>
-        {((c.pagado_banco ?? 0) + (c.pagado_detraccion ?? 0)) > 0.01 && <Boton onClick={() => setAccion('devolucion')}>Devolver dinero</Boton>}
-        <Boton variante="peligro" onClick={() => setAccion('anular')}>Anular registro</Boton>
+        {puedeAgregar('pago') && ((c.pagado_banco ?? 0) + (c.pagado_detraccion ?? 0)) > 0.01 && <Boton onClick={() => setAccion('devolucion')}>Devolver dinero</Boton>}
+        {puedeEditar('comprobante') && <Boton variante="peligro" onClick={() => setAccion('anular')}>Anular registro</Boton>}
       </div>}
       {c.estado === 'sin_efecto' && <div className="mt-4 rounded-lg bg-s2 p-3 text-sm text-t2">
         Factura sin efecto por nota de crédito. Si el cliente ya había pagado, puedes facturar de nuevo sus cuotas (el pago se aplica a la nueva factura) o devolverle el dinero.
-        <div className="mt-2"><Boton onClick={() => setAccion('devolucion')}>Devolver dinero</Boton></div>
+        {puedeAgregar('pago') && <div className="mt-2"><Boton onClick={() => setAccion('devolucion')}>Devolver dinero</Boton></div>}
       </div>}
 
       <Seccion titulo="Cuotas y ventas">

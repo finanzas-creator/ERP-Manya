@@ -6,6 +6,7 @@ import { dinero, fecha, usd } from '../lib/formato'
 import { Boton, Campo, Card, Estado, Input, Kpi, MensajeError, Modal, Select, Tabla, Titulo } from '../components/ui'
 import { Icono } from '../components/iconos'
 import { HistorialGestion } from '../components/GestionCobranza'
+import { useOrigenSheet } from '../lib/origen'
 
 /** Ficha del cliente: deuda, servicios y ventas, con edición de sus datos y marcas. */
 export default function ClienteDetalle() {
@@ -13,6 +14,7 @@ export default function ClienteDetalle() {
   const navigate = useNavigate()
   const [editar, setEditar] = useState(false)
   const [nuevaMarca, setNuevaMarca] = useState(false)
+  const { puedeAgregar } = useOrigenSheet()   // R-71
   const cliente = useQuery({
     queryKey: ['cliente', id],
     queryFn: async () => ok(await supabase.from('v_cliente').select('*').eq('id', id!).single()),
@@ -42,7 +44,7 @@ export default function ClienteDetalle() {
       <div className="mb-1"><Link to="/clientes" className="text-sm text-t2 hover:text-t1">← Clientes</Link></div>
       <Titulo accion={<div className="flex gap-2">
         <Boton onClick={() => setEditar(true)}>Editar datos</Boton>
-        <Link to={`/ventas/nueva?cliente=${id}`}><Boton variante="primario"><Icono nombre="mas" />Nueva venta</Boton></Link>
+        {puedeAgregar('venta') && <Link to={`/ventas/nueva?cliente=${id}`}><Boton variante="primario"><Icono nombre="mas" />Nueva venta</Boton></Link>}
       </div>}>{c?.razon_social ?? 'Cliente'}</Titulo>
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-t2">
         <span>{fiscal.data?.tipo_documento ?? 'RUC'} {c?.ruc ?? '—'}</span>
@@ -102,6 +104,9 @@ function EditarCliente({ id, inicial, onCerrar }:
   { id: string; inicial: { razon_social: string; ruc: string; no_domiciliado: boolean; tipo_documento: string; direccion_fiscal: string; correo_facturacion: string }; onCerrar: () => void }) {
   const qc = useQueryClient()
   const [f, setF] = useState(inicial)
+  // R-71: la razón social y si es no domiciliado vienen del sheet; los datos fiscales viven en el ERP
+  const { puedeEditar, desdeSheet } = useOrigenSheet()
+  const nombreEditable = puedeEditar('cliente', 'razon_social')
   const sunat = useMutation({
     mutationFn: async () => ok(await supabase.rpc('consultar_ruc', { p_ruc: f.ruc.trim() })) as unknown as
       { nombre: string; estado: string; condicion: string; direccion: string },
@@ -117,7 +122,8 @@ function EditarCliente({ id, inicial, onCerrar }:
   return (
     <Modal titulo="Datos del cliente" onCerrar={onCerrar}>
       <div className="flex flex-col gap-3">
-        <Campo label="Razón social"><Input value={f.razon_social} onChange={(e) => setF({ ...f, razon_social: e.target.value })} autoFocus /></Campo>
+        <Campo label="Razón social"><Input value={f.razon_social} disabled={!nombreEditable} onChange={(e) => setF({ ...f, razon_social: e.target.value })} autoFocus={nombreEditable} /></Campo>
+        {desdeSheet && !nombreEditable && <p className="-mt-2 text-xs text-t3">La razón social y si es no domiciliado se corrigen en el sheet administrativo.</p>}
         <Campo label="Tipo de documento">
           <Select value={f.tipo_documento} onChange={(e) => setF({ ...f, tipo_documento: e.target.value })}>
             <option value="RUC">RUC</option><option value="DNI">DNI</option><option value="CE">Carné de extranjería</option>
@@ -135,13 +141,13 @@ function EditarCliente({ id, inicial, onCerrar }:
           <div className={`text-xs ${sunat.data.estado === 'ACTIVO' && sunat.data.condicion === 'HABIDO' ? 'text-good' : 'text-critical'}`}>{sunat.data.estado} · {sunat.data.condicion}</div>
           {sunat.data.direccion && <div className="text-xs text-t3">{sunat.data.direccion}</div>}
           <button className="mt-1 text-xs text-accent hover:underline"
-            onClick={() => setF({ ...f, razon_social: sunat.data!.nombre, direccion_fiscal: sunat.data!.direccion?.trim() || f.direccion_fiscal })}>Usar estos datos</button>
+            onClick={() => setF({ ...f, razon_social: nombreEditable ? sunat.data!.nombre : f.razon_social, direccion_fiscal: sunat.data!.direccion?.trim() || f.direccion_fiscal })}>Usar estos datos</button>
         </div>}
         <MensajeError error={sunat.error} />
         <Campo label="Dirección fiscal"><Input value={f.direccion_fiscal} onChange={(e) => setF({ ...f, direccion_fiscal: e.target.value })} /></Campo>
         <Campo label="Correo para enviar comprobantes"><Input type="email" value={f.correo_facturacion} onChange={(e) => setF({ ...f, correo_facturacion: e.target.value })} /></Campo>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={f.no_domiciliado} onChange={(e) => setF({ ...f, no_domiciliado: e.target.checked })} />
+          <input type="checkbox" checked={f.no_domiciliado} disabled={!puedeEditar('cliente', 'no_domiciliado')} onChange={(e) => setF({ ...f, no_domiciliado: e.target.checked })} />
           No domiciliado (exportación: sus ventas nuevas van sin IGV, R-12)
         </label>
       </div>

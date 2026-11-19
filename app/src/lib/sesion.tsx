@@ -11,6 +11,7 @@ const LLEGA_POR_ENLACE = /type=(invite|recovery)/.test(window.location.hash)
 
 type Sesion = {
   usuario: Usuario | null | undefined   // undefined = cargando, null = sin sesión
+  sinAcceso: boolean                    // entró, pero su usuario está desactivado o no tiene rol (R-83)
   entrarDev: (rol: string) => Promise<void>
   entrar: (email: string, clave: string) => Promise<void>
   debeCrearClave: boolean
@@ -44,6 +45,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
 
   const valor: Sesion = {
     usuario: !autenticado ? null : isLoading ? undefined : (usuario ?? null),
+    sinAcceso: autenticado && !isLoading && !usuario && !DEV_AUTH,
     entrarDev: async (rol) => {
       const r = await fetch(`/dev/token?rol=${rol}`)
       guardarTokenDev((await r.json()).token)

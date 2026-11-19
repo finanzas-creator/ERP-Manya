@@ -60,5 +60,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ⬜ Control de pauta con consumo real (ManyaPulse)
 - ✅ Registrar costos de proveedor (influencers, producción) y consumo de pauta desde la venta, con su GP o control de pauta
 - ⬜ Alertas (vencimientos, renovaciones)
+- ✅ Usuarios: invitar, reenviar acceso, cambiar rol y desactivar desde la app (R-83)
+- ✅ Mientras el sheet sea la fuente, la app no ofrece registrar lo que viene del sheet y la base lo rechaza (R-71, D-27)
 - ✅ Catálogos editables en Configuración (servicios, categorías, líneas, cuentas, personas, equipos, sub-áreas, tipos de gestión) · ⬜ plantillas de plan de pagos
 - ⬜ Tipo de recibo y forma de pago de la planilla como catálogos (hoy texto con sugerencias)

@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ok, supabase } from '../lib/supabase'
 import { fecha, mesActual, mesLargo, sumarMeses } from '../lib/formato'
-import { ROLES } from '../lib/estados'
 import { Boton, Campo, Card, Input, MensajeError, Modal, Nota, Pestanas, Tabla, Titulo } from '../components/ui'
 import Empresas from './config/Empresas'
 import Catalogos from './config/Catalogos'
+import { useOrigenSheet } from '../lib/origen'
 
 /** Parámetros que alimentan los cálculos. Solo el administrador los cambia (R-80). */
 export default function Configuracion() {
@@ -28,7 +28,6 @@ function General() {
         <div className="flex flex-col gap-4">
           <Parametros />
           <PesosDireccion />
-          <Usuarios />
         </div>
       </div>
     </>
@@ -163,6 +162,7 @@ function Parametros() {
 // ---------------------------------------------------------------- Pesos de Dirección (R-62, D-16)
 function PesosDireccion() {
   const qc = useQueryClient()
+  const { puedeEditar } = useOrigenSheet()   // R-71: los pesos vienen del sheet
   const pesos = useQuery({ queryKey: ['pesos'], queryFn: async () => ok(await supabase.from('peso_direccion').select('linea_id, peso, linea:linea_id(nombre)').order('linea_id')) })
   const [f, setF] = useState<Record<string, string> | null>(null)
   const valores = f ?? Object.fromEntries((pesos.data ?? []).map((p) => [String(p.linea_id), String(+(p.peso * 100).toFixed(2))]))
@@ -176,30 +176,15 @@ function PesosDireccion() {
       <div className="grid grid-cols-3 gap-3 p-4">
         {(pesos.data ?? []).map((p) => (
           <Campo key={p.linea_id} label={`${(p.linea as unknown as { nombre: string })?.nombre} (%)`}>
-            <Input type="number" step="1" value={valores[String(p.linea_id)] ?? ''} onChange={(e) => setF({ ...valores, [String(p.linea_id)]: e.target.value })} />
+            <Input type="number" step="1" disabled={!puedeEditar('peso_direccion')} value={valores[String(p.linea_id)] ?? ''} onChange={(e) => setF({ ...valores, [String(p.linea_id)]: e.target.value })} />
           </Campo>
         ))}
       </div>
       <div className="flex items-center justify-between gap-2 border-t border-line px-4 py-3">
         <MensajeError error={guardar.error} />
-        <Boton variante="primario" className="ml-auto" disabled={!f || guardar.isPending} onClick={() => guardar.mutate()}>Guardar reparto</Boton>
+        {puedeEditar('peso_direccion') && <Boton variante="primario" className="ml-auto" disabled={!f || guardar.isPending} onClick={() => guardar.mutate()}>Guardar reparto</Boton>}
       </div>
       <Nota>La planilla de Dirección y Gerencia se reparte entre las líneas con estos pesos; deben sumar 100% (R-62). Pendiente de confirmar (D-16).</Nota>
-    </Card>
-  )
-}
-
-// ---------------------------------------------------------------- Usuarios (R-80)
-function Usuarios() {
-  const { data } = useQuery({ queryKey: ['usuarios'], queryFn: async () => ok(await supabase.from('usuario').select('*').order('email')) })
-  return (
-    <Card titulo="Usuarios">
-      <Tabla filas={data} clave={(u) => u.id} columnas={[
-        { titulo: 'Correo', celda: (u) => u.email },
-        { titulo: 'Rol', celda: (u) => ROLES[u.rol] },
-        { titulo: 'Estado', celda: (u) => u.activo ? 'Activo' : <span className="text-t3">Inactivo</span> },
-      ]} />
-      <Nota>Para invitar a alguien nuevo, envía su correo y rol (Administrador, Tesorería o CEO): le llega un correo para crear su contraseña.</Nota>
     </Card>
   )
 }

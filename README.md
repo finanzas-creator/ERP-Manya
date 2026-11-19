@@ -51,7 +51,12 @@ Postgres: todo se envía por la Management API con `db/supabase.py` y la variabl
    7:00 a 21:00, lunes a sábado, hora de Lima) hace esto (D-25); `python3 etl/sincronizar.py ultima` dice
    la revisión de la última carga para no recargar si el sheet no cambió. Para revisar a
    fondo, en local: `make db && make migrate-data && make test`.
-3. **Usuarios:** solo por invitación (en Auth el registro público está desactivado). Invitarlos en Auth y registrar su fila en `usuario` con el mismo id y su rol.
+3. **Usuarios (R-83):** solo por invitación (en Auth el registro público está desactivado). El
+   Administrador invita, reenvía el acceso, cambia el rol y desactiva desde la pantalla **Usuarios**.
+   Invitar necesita la llave de servicio de Auth, por eso pasa por la Edge Function
+   `supabase/functions/usuarios` (D-26), que se publica con la Management API
+   (`POST /v1/projects/<ref>/functions/deploy?slug=usuarios`, con `verify_jwt`). En Auth, los
+   enlaces de los correos duran 24 horas (`mailer_otp_exp` = 86400) y las plantillas están en español.
    En Auth, la *Site URL* debe ser la dirección de la app: el correo de invitación lleva a la
    app, donde la persona crea su contraseña. "Olvidé mi contraseña" usa el mismo flujo.
 4. **App:** https://manya-erp.pages.dev — proyecto Cloudflare Pages `manya-erp` (subida

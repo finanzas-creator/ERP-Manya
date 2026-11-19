@@ -10,6 +10,8 @@ import { PagoModal } from '../components/Pago'
 import { GestionModal } from '../components/GestionCobranza'
 import { AutodetraccionesPendientes } from '../components/Autodetraccion'
 import type { Fila } from '../lib/db'
+import { useOrigenSheet } from '../lib/origen'
+import { EnSheet } from '../components/EnSheet'
 
 type Linea = Fila<'v_cobranza'>
 type Comp = { comprobante_id: string; serie: string; cliente: string; cliente_id: string; empresa_id: number | null; vencimiento: string | null; tramo: string
@@ -22,6 +24,7 @@ export default function Cobranza() {
   const [vista, setVista] = useState<'cliente' | 'comprobante'>('cliente')
   const [pagar, setPagar] = useState<Comp | null>(null)
   const [gestion, setGestion] = useState<{ cliente_id: string; cliente: string } | null>(null)
+  const { puedeAgregar } = useOrigenSheet()   // R-71: los pagos vienen del sheet
   const { data } = useQuery({
     queryKey: ['cobranza'],
     queryFn: async () => ok(await supabase.from('v_cobranza').select('*').order('vencimiento')),
@@ -47,6 +50,7 @@ export default function Cobranza() {
   return (
     <>
       <Titulo>Cobranza</Titulo>
+      <EnSheet que="Cada pago recibido" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {TRAMOS.map((k) => (
           <button key={k} onClick={() => setTramo(tramo === k ? '' : k)} className={`text-left ${tramo === k ? 'ring-2 ring-accent rounded-xl' : ''}`}>
@@ -68,7 +72,7 @@ export default function Cobranza() {
           { titulo: 'Antigüedad', celda: (c) => <Estado valor={c.tramo} /> },
           { titulo: '', celda: (c) => <div className="flex justify-end gap-1">
             {c.dias > 0 && <Boton variante="fantasma" onClick={(e) => { e.stopPropagation(); setGestion(c) }}>Gestión</Boton>}
-            <Boton onClick={(e) => { e.stopPropagation(); setPagar(c) }}>Pagar</Boton>
+            {puedeAgregar('pago') && <Boton onClick={(e) => { e.stopPropagation(); setPagar(c) }}>Pagar</Boton>}
           </div> },
         ]} />
       </Card>}

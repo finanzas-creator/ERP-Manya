@@ -5,6 +5,8 @@ import { ok, supabase } from '../lib/supabase'
 import { dinero, fecha, usd } from '../lib/formato'
 import { Boton, Card, Estado, Kpi, MensajeError, Pestanas, Tabla, Titulo } from '../components/ui'
 import type { Fila } from '../lib/db'
+import { useOrigenSheet } from '../lib/origen'
+import { EnSheet } from '../components/EnSheet'
 
 type Ren = Fila<'v_renovacion'>
 type Vista = 'por_vencer' | 'vencida' | 'caida' | 'vigente' | 'todas'
@@ -21,6 +23,7 @@ export default function Renovaciones() {
   const qc = useQueryClient()
   const [vista, setVista] = useState<Vista>('por_vencer')
   const [confirmar, setConfirmar] = useState<Ren | null>(null)
+  const { puedeAgregar } = useOrigenSheet()   // R-71: renovar crea la venta del ciclo nuevo, que viene del sheet
   const { data } = useQuery({
     queryKey: ['renovaciones'],
     queryFn: async () => ok(await supabase.from('v_renovacion').select('*').order('vence', { nullsFirst: true })),
@@ -43,6 +46,7 @@ export default function Renovaciones() {
   return (
     <>
       <Titulo>Renovaciones</Titulo>
+      <EnSheet que="La renovación (el contrato del ciclo nuevo) o la baja de un servicio" />
       <details className="mb-3 max-w-3xl rounded-lg border border-line bg-s1 px-4 py-3 text-sm text-t2">
         <summary className="cursor-pointer font-medium text-t1">¿Cómo funcionan las renovaciones?</summary>
         <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -91,7 +95,7 @@ export default function Renovaciones() {
           { titulo: 'Vence', celda: (r) => <><div className="whitespace-nowrap">{fecha(r.vence)}</div><div className="text-xs whitespace-nowrap text-t3">{dias(r.dias_para_vencer)}</div></> },
           { titulo: 'Ciclo', derecha: true, celda: (r) => <span title="Ventas de este servicio, contando la actual">{r.ciclos}°</span> },
           { titulo: 'Monto mensual', derecha: true, celda: (r) => dinero(r.monto_neto, r.moneda) },
-          { titulo: '', celda: (r) => (
+          { titulo: '', celda: (r) => puedeAgregar('venta') && (
             <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
               <Boton disabled={!r.vence || renovar.isPending} onClick={() => renovar.mutate(r.ultima_venta_id!)}
                 title={(r.deuda_vencida_usd ?? 0) > 0.5 ? 'Ojo: el cliente tiene deuda vencida' : undefined}>Renovar</Boton>
