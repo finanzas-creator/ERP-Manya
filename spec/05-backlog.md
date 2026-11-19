@@ -24,7 +24,7 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ✅ Generar plan de pagos para ventas que no lo tienen
 - ✅ Modalidad por venta (R-02, D-21) · ✅ elegirla al registrar la venta
 
-- ✅ Actualización automática desde el sheet cada hora, en una transacción y conservando lo que solo vive en el ERP (R-71)
+- ✅ Actualización automática desde el sheet (cada 3 horas, D-28), en una transacción y conservando lo que solo vive en el ERP (R-71)
 
 ## R2 · Facturación y cobranza
 - ✅ Emitir comprobante agrupando cuotas (detracción sugerida por R-22) · ✅ serie y número siguiente por empresa
@@ -60,7 +60,8 @@ prueba y la vista previa fue validada por el dueño de producto.
 - ⬜ Control de pauta con consumo real (ManyaPulse)
 - ✅ Registrar costos de proveedor (influencers, producción) y consumo de pauta desde la venta, con su GP o control de pauta
 - ⬜ Alertas (vencimientos, renovaciones)
-- ✅ Usuarios: invitar, reenviar acceso, cambiar rol y desactivar desde la app (R-83)
+- ✅ Usuarios: invitar, reenviar acceso, cambiar rol y desactivar desde la app (R-83) · ⬜ correos de acceso en español (al pasar a Supabase Pro)
+- ⬜ Invertir la fuente: el ERP registra y actualiza el sheet (cuando el negocio lo decida, D-28)
 - ✅ Mientras el sheet sea la fuente, la app no ofrece registrar lo que viene del sheet y la base lo rechaza (R-71, D-27)
 - ✅ Catálogos editables en Configuración (servicios, categorías, líneas, cuentas, personas, equipos, sub-áreas, tipos de gestión) · ⬜ plantillas de plan de pagos
 - ⬜ Tipo de recibo y forma de pago de la planilla como catálogos (hoy texto con sugerencias)

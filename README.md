@@ -47,16 +47,17 @@ Postgres: todo se envía por la Management API con `db/supabase.py` y la variabl
    3. `python3 etl/sincronizar.py verificar etl/out/grid` (si falta algo, dice qué leer).
    4. `python3 etl/sincronizar.py armar etl/out/grid` → `data/sheet.xlsx` y los lotes.
    5. `python3 etl/sincronizar.py cargar --revision "<modifiedTime del sheet en Drive>"`.
-   La tarea programada (sesión "Manya ERP · actualización automática desde el sheet", cada hora de
-   7:00 a 21:00, lunes a sábado, hora de Lima) hace esto (D-25); `python3 etl/sincronizar.py ultima` dice
+   La tarea programada (sesión "Manya ERP · actualización automática desde el sheet", cada 3 horas:
+   8:07, 11:07, 14:07, 17:07 y 20:07, lunes a sábado, hora de Lima) hace esto (D-25, D-28); `python3 etl/sincronizar.py ultima` dice
    la revisión de la última carga para no recargar si el sheet no cambió. Para revisar a
    fondo, en local: `make db && make migrate-data && make test`.
 3. **Usuarios (R-83):** solo por invitación (en Auth el registro público está desactivado). El
    Administrador invita, reenvía el acceso, cambia el rol y desactiva desde la pantalla **Usuarios**.
    Invitar necesita la llave de servicio de Auth, por eso pasa por la Edge Function
    `supabase/functions/usuarios` (D-26), que se publica con la Management API
-   (`POST /v1/projects/<ref>/functions/deploy?slug=usuarios`, con `verify_jwt`). Cuánto dura el
-   enlace de los correos lo fija Auth (`mailer_otp_exp`).
+   (`POST /v1/projects/<ref>/functions/deploy?slug=usuarios`, con `verify_jwt`). En Auth los enlaces
+   duran 24 horas (`mailer_otp_exp` = 86400) y la contraseña mínima es de 8 caracteres. Las plantillas
+   de correo en español requieren el plan Pro de Supabase (o un SMTP propio).
    En Auth, la *Site URL* debe ser la dirección de la app: el correo de invitación lleva a la
    app, donde la persona crea su contraseña. "Olvidé mi contraseña" usa el mismo flujo.
 4. **App:** https://manya-erp.pages.dev — proyecto Cloudflare Pages `manya-erp` (subida
