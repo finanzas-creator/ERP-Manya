@@ -70,6 +70,12 @@ begin
   exception when others then assert sqlerrm like 'R-71%', sqlerrm;
   end;
   insert into tipo_cambio_mensual (periodo, tc, fuente) values ('2027-01-01', 3.5, 'manual');
+  -- R-70: con el sheet como fuente no se cierran meses (la carga siguiente fallaría)
+  begin
+    insert into cierre_mensual (periodo) values ('2026-01-01');
+    raise exception 'R-70 debió rechazar el cierre';
+  exception when others then assert sqlerrm like 'R-70: mientras el sheet%', sqlerrm;
+  end;
 
   -- R-83: estados calculados
   update usuario set activo = false where id = '00000000-0000-0000-0000-0000000000e3';

@@ -40,6 +40,7 @@ function TipoCambio() {
   const [editar, setEditar] = useState<string | null>(null)
   const [cerrar, setCerrar] = useState<string | null>(null)
   const tc = useQuery({ queryKey: ['tc'], queryFn: async () => ok(await supabase.from('tipo_cambio_mensual').select('*').order('periodo', { ascending: false }).limit(24)) })
+  const { desdeSheet } = useOrigenSheet()   // R-70: con el sheet como fuente no se cierran meses aquí
   const cierres = useQuery({ queryKey: ['cierres'], queryFn: async () => ok(await supabase.from('cierre_mensual').select('*')) })
   const cerrado = (p: string) => cierres.data?.some((c) => c.periodo === p)
   const siguiente = sumarMeses(tc.data?.[0]?.periodo ?? mesActual(), 1)
@@ -72,7 +73,7 @@ function TipoCambio() {
           ? <span className="text-xs text-t3">Cerrado</span>
           : <span className="flex gap-2">
               <button className="text-xs text-accent hover:underline" onClick={() => setEditar(t.periodo)}>Editar</button>
-              {t.periodo < mesActual() && <button className="text-xs text-accent hover:underline" onClick={() => setCerrar(t.periodo)}>Cerrar mes</button>}
+              {!desdeSheet && t.periodo < mesActual() && <button className="text-xs text-accent hover:underline" onClick={() => setCerrar(t.periodo)}>Cerrar mes</button>}
             </span> },
       ]} />
       <Nota>Con este TC se convierten a USD las ventas y los costos en soles del mes (R-06, R-60). Desde noviembre 2026 se toma solo cada día el TC de venta SUNAT (7:00 de Lima, con un reintento a las 10:00); hasta octubre se conserva el del sheet, ya conciliado. Si lo corriges a mano, queda como manual y no se sobrescribe. Cerrar un mes bloquea sus registros y fija su TC (R-70).</Nota>
