@@ -34,8 +34,8 @@ async function funcionUsuarios(cuerpo: Record<string, unknown>): Promise<Envio> 
 }
 
 const mensajeEnvio = (r: Envio) => r.enviado === 'invitacion'
-  ? `Invitación enviada a ${r.email}. Debe abrir el correo dentro de las 24 horas.`
-  : `Se envió a ${r.email} un enlace para crear una contraseña nueva (vence en 24 horas).`
+  ? `Invitación enviada a ${r.email}. Que abra el correo cuanto antes: el enlace vence.`
+  : `Se envió a ${r.email} un enlace para crear una contraseña nueva. Que lo abra cuanto antes: vence.`
 
 /** R-83: quién entra al ERP y con qué rol. Solo el Administrador ve esta pantalla. */
 export default function Usuarios() {
@@ -88,7 +88,7 @@ export default function Usuarios() {
         <Nota>
           Roles: {Object.entries(QUE_HACE).map(([r, t]) => `${ROLES[r as Usuario['rol']]} — ${t}`).join(' · ')}.
           Nadie se borra: quien está desactivado no ve ningún dato y se puede reactivar. Siempre debe quedar un Administrador activo (R-83).
-          Los enlaces de los correos vencen a las 24 horas; si no llegan, que revisen spam y reenvía.
+          Los enlaces de los correos vencen: si venció o no llegó (revisar spam), reenvía.
         </Nota>
       </Card>
       {invitar && <InvitarModal onCerrar={() => setInvitar(false)} onListo={(r) => { setInvitar(false); setAviso(mensajeEnvio(r)) }} />}
@@ -113,7 +113,7 @@ function InvitarModal({ onCerrar, onListo }: { onCerrar: () => void; onListo: (r
             {(ENUMS.rol as readonly Usuario['rol'][]).map((r) => <option key={r} value={r}>{ROLES[r]} — {QUE_HACE[r]}</option>)}
           </Select>
         </Campo>
-        <p className="text-xs text-t3">Le llega un correo para crear su contraseña. El enlace vence a las 24 horas.</p>
+        <p className="text-xs text-t3">Le llega un correo para crear su contraseña. Que lo abra cuanto antes: el enlace vence.</p>
       </div>
       <div className="mt-3"><MensajeError error={enviar.error} /></div>
       <div className="mt-4 flex justify-end gap-2">

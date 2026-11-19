@@ -55,8 +55,8 @@ Postgres: todo se envía por la Management API con `db/supabase.py` y la variabl
    Administrador invita, reenvía el acceso, cambia el rol y desactiva desde la pantalla **Usuarios**.
    Invitar necesita la llave de servicio de Auth, por eso pasa por la Edge Function
    `supabase/functions/usuarios` (D-26), que se publica con la Management API
-   (`POST /v1/projects/<ref>/functions/deploy?slug=usuarios`, con `verify_jwt`). En Auth, los
-   enlaces de los correos duran 24 horas (`mailer_otp_exp` = 86400) y las plantillas están en español.
+   (`POST /v1/projects/<ref>/functions/deploy?slug=usuarios`, con `verify_jwt`). Cuánto dura el
+   enlace de los correos lo fija Auth (`mailer_otp_exp`).
    En Auth, la *Site URL* debe ser la dirección de la app: el correo de invitación lleva a la
    app, donde la persona crea su contraseña. "Olvidé mi contraseña" usa el mismo flujo.
 4. **App:** https://manya-erp.pages.dev — proyecto Cloudflare Pages `manya-erp` (subida
